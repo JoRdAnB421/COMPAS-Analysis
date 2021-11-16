@@ -354,3 +354,6 @@ COMPAS_Output_solar_metallicity/
 COMPAS_Output_1%solar_metallicity/
 COMPAS_Output_10%solar_metallicity/
 
+# Ignore Antonini & Rasio 2016 data
+Antonini_Rasio_data/
+
