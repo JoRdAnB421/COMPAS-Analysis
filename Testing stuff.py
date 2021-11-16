@@ -2,10 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-'''
-Checking if the github authentication is working
-'''
-
 COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_0.0001_solar_metallicity"
 SN = pd.read_csv((COMPAS_Results_path + r"\BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv((COMPAS_Results_path + r"\BSE_System_Parameters.csv"), skiprows=2)
