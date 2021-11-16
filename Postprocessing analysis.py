@@ -219,7 +219,7 @@ axes[1].set_ylabel("Distribution")
 axes[1].set_xlim(1,)
 #plt.grid(which ="both", ls="--")
 
-plt.savefig(cwd+COMPAS_Results_path + "\Fraction of black holes retained.png")
+plt.savefig(cwd+COMPAS_Results_path + "/Fraction of black holes retained.png")
 
 ##################################################
 plt.figure(figsize=(10,8))
@@ -232,7 +232,7 @@ plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the 
 plt.ylabel("Fraction of retained blackholes")
 plt.xlabel("$v_{esc} \ km s^{-1}$")
 plt.legend(loc="best")
-plt.savefig(cwd+COMPAS_Results_path + "\Fraction of retained blackholes that are in binaries.png")
+plt.savefig(cwd+COMPAS_Results_path + "/Fraction of retained blackholes that are in binaries.png")
 
 ################################
 '''
@@ -260,7 +260,7 @@ plt.legend(loc="best")
 plt.xlabel("$V_{kick} \ [kms^{-1}]$")
 plt.ylabel("CDF")
 
-plt.savefig(cwd+COMPAS_Results_path + "\Systemic and Component kick velocities.png")
+plt.savefig(cwd+COMPAS_Results_path + "/Systemic and Component kick velocities.png")
 '''
 I want to highlight the points at 50% and 90% for each group
 '''
@@ -336,11 +336,11 @@ for i in range(1, len(v_esc_tester)):
 
     plt.figure()
     plt.xscale("log")
-    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
+    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = True, cumulative = True, color = "blue", histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
-    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "green",linestyle="--", histtype = "step")
+    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = True, cumulative = True, color = "green",linestyle="--", histtype = "step")
 
 
     plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
@@ -349,7 +349,7 @@ for i in range(1, len(v_esc_tester)):
     plt.ylabel("PDF")
     plt.xlabel("a [$AU$]")
     plt.xlabel("$a_{h}/a$")
-    plt.legend(loc="best")
+    plt.legend(loc="upper left")
 
     plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
 """
