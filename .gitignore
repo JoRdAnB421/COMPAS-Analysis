@@ -350,5 +350,7 @@ MigrationBackup/
 .ionide/
 
 # Ignore the data files for now as they are very large
-COMPAS_Ouput*/
+COMPAS_Output_solar_metallicity/
+COMPAS_Output_1%solar_metallicity/
+COMPAS_Output_10%solar_metallicity/
 
