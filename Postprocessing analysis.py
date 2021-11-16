@@ -5,6 +5,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+def sq_recoil_kick(mass1, mass2, mass3, a):
+    q = mass3/(mass1+mass2)
+    mu12 = (mass1*mass2)/(mass1+mass2)
+    M123 = (mass1+mass2+mass3)
+    return 0.2*q*(G*mu12)/(a)*mass3/M123
 
 # Gravitational constant in useful units
 G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
@@ -17,7 +22,7 @@ SN_types = {"ccSN":1,
             "USSN":16}
 
 # Grabbing Fabio's escape velocity data from Antonini, F. and Rasio, F.A., 2016. 
-data_path = r"C:\Users\jorda\OneDrive\Desktop\PhD"
+data_path = r"Antonini_Rasio_data"
 globular_data = np.loadtxt(data_path+r"\Globular cluster hist.txt", skiprows = 4)
 nuclear_data = np.loadtxt(data_path+r"\Nuclear clusters.txt", skiprows = 4)
 
@@ -31,7 +36,8 @@ nuc_bin_height = nuclear_data[:,1][1:-1:2]
 nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(len(nuc_bin_edges)-1)])
 
 # Setting the path to the COMPAS results 
-COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
+#COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
+COMPAS_Results_path = r"COMPAS_Output_1%solar_metallicity"
 SN = pd.read_csv((COMPAS_Results_path + r"\BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv((COMPAS_Results_path + r"\BSE_System_Parameters.csv"), skiprows=2)
 
@@ -310,9 +316,13 @@ for i in range(1, len(v_esc_tester)):
     ah = G*mu/sigma**2 # R_sol
     ah_a = ah/retained_bound["SemiMajorAxis "]
     
+    # Here we calculate the recoil kick from a single perturber
+    # We are lookoing to see how many systems would be so hard that they would be kicked out of the cluster after a single interaction
+
+
     plt.figure()
     plt.xscale("log")
-    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = True, cumulative = True, color = "blue", histtype = "step")
+    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
