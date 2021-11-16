@@ -21,10 +21,13 @@ SN_types = {"ccSN":1,
             "PPISN":8,
             "USSN":16}
 
+# Finding current working directory
+cwd = os.getcwd()
+
 # Grabbing Fabio's escape velocity data from Antonini, F. and Rasio, F.A., 2016. 
-data_path = r"Antonini_Rasio_data"
-globular_data = np.loadtxt(data_path+r"\Globular cluster hist.txt", skiprows = 4)
-nuclear_data = np.loadtxt(data_path+r"\Nuclear clusters.txt", skiprows = 4)
+data_path = "/Antonini_Rasio_data"
+globular_data = np.loadtxt(cwd+data_path+"/Globular cluster hist.txt", skiprows = 4)
+nuclear_data = np.loadtxt(cwd+data_path+"/Nuclear clusters.txt", skiprows = 4)
 
 # Setting the bin edges, heights and bin widths for the histograms
 glob_bin_edges = globular_data[:,0][::2]
@@ -37,9 +40,9 @@ nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(l
 
 # Setting the path to the COMPAS results 
 #COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
-COMPAS_Results_path = r"COMPAS_Output_1%solar_metallicity"
-SN = pd.read_csv((COMPAS_Results_path + r"\BSE_Supernovae.csv"), skiprows=2)
-SP = pd.read_csv((COMPAS_Results_path + r"\BSE_System_Parameters.csv"), skiprows=2)
+COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
+SN = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_Supernovae.csv"), skiprows=2)
+SP = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_System_Parameters.csv"), skiprows=2)
 
 EAB = SP.loc[SP['Equilibrated_At_Birth'] == 1]
 SN.drop(SN.loc[SN["    SEED    "].isin(EAB["    SEED    "])].index, inplace = True)
@@ -55,7 +58,7 @@ SN = SN.astype({"SystemicSpeed ":"float64",
                 "SemiMajorAxis ":"float64"})
 
 # Making a folder for the distribution plots
-outdir_distributions = COMPAS_Results_path + r"\Plots for different escape velocities"
+outdir_distributions = cwd+COMPAS_Results_path + "/Plots for different escape velocities"
 if not os.path.exists(outdir_distributions): os.makedirs(outdir_distributions) 
 
 print(SN.keys())
@@ -133,6 +136,9 @@ frac_hard_bound = np.zeros_like(v_esc)
 
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
+
+# Setting the mass of the perturber
+m3 = 20 # M_sol
 
 for i in range(len(v_esc)):
     """
@@ -213,7 +219,7 @@ axes[1].set_ylabel("Distribution")
 axes[1].set_xlim(1,)
 #plt.grid(which ="both", ls="--")
 
-plt.savefig(COMPAS_Results_path + r"/Fraction of black holes retained.png")
+plt.savefig(cwd+COMPAS_Results_path + "\Fraction of black holes retained.png")
 
 ##################################################
 plt.figure(figsize=(10,8))
@@ -226,7 +232,7 @@ plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the 
 plt.ylabel("Fraction of retained blackholes")
 plt.xlabel("$v_{esc} \ km s^{-1}$")
 plt.legend(loc="best")
-plt.savefig(COMPAS_Results_path + r"/Fraction of retained blackholes that are in binaries.png")
+plt.savefig(cwd+COMPAS_Results_path + "\Fraction of retained blackholes that are in binaries.png")
 
 ################################
 '''
@@ -254,7 +260,7 @@ plt.legend(loc="best")
 plt.xlabel("$V_{kick} \ [kms^{-1}]$")
 plt.ylabel("CDF")
 
-plt.savefig(COMPAS_Results_path + r"/Systemic and Component kick velocities.png")
+plt.savefig(cwd+COMPAS_Results_path + "\Systemic and Component kick velocities.png")
 '''
 I want to highlight the points at 50% and 90% for each group
 '''
@@ -318,13 +324,24 @@ for i in range(1, len(v_esc_tester)):
     
     # Here we calculate the recoil kick from a single perturber
     # We are lookoing to see how many systems would be so hard that they would be kicked out of the cluster after a single interaction
+        
+    # Here we check how many of these hard binaries would be ejected after a single recoil kick
+    M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
+    
+    # Some required quantities
+    q3 = m3/M12
+    M123 = M12 + m3 # M_sol
 
+    eject_on_first = ah_a.loc[(ah_a > 113.76 * M123/m3 * 1/q3)]
 
     plt.figure()
     plt.xscale("log")
     vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
+
+    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "green",linestyle="--", histtype = "step")
+
 
     plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
     
@@ -334,7 +351,7 @@ for i in range(1, len(v_esc_tester)):
     plt.xlabel("$a_{h}/a$")
     plt.legend(loc="best")
 
-    plt.savefig(outdir_distributions+r"\ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
+    plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
 """
     plt.figure()
     plt.xscale("log")
