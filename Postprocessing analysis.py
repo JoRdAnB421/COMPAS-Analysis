@@ -194,7 +194,10 @@ for i in range(len(v_esc)):
     M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
     
     # Setting some useful parameters
-    q3 = m3/M12
+    #q3 = m3/M12
+    # Fabio's suggestion is to actually set q3 = 1
+    q3 = 1
+
     M123 = M12 + m3 # M_sol
 
     vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3/M123)
@@ -358,7 +361,10 @@ for i in range(1, len(v_esc_tester)):
 
     for j in range(len(m3)):
         # Some required quantities
-        q3 = m3[j]/M12
+        #q3 = m3[j]/M12
+        # Fabio's suggestion is to set q3=1 as it was founded out of some approximations
+        q3 = 1
+
         M123 = M12 + m3[j] # M_sol
 
         vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3[j]/M123)
