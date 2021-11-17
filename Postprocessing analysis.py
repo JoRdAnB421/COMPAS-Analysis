@@ -332,16 +332,17 @@ for i in range(1, len(v_esc_tester)):
     q3 = m3/M12
     M123 = M12 + m3 # M_sol
 
-    eject_on_first = ah_a.loc[(ah_a > 113.76 * M123/m3 * 1/q3)]
+    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3/M123)
+    index = np.sqrt(vbsq)>v_esc_tester[i]
+    eject_on_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
 
     plt.figure()
     plt.xscale("log")
-    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = True, cumulative = True, color = "blue", histtype = "step")
+    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
-    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = True, cumulative = True, color = "green",linestyle="--", histtype = "step")
-
+    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "purple",linestyle="-.", histtype = "step", label = "Systems ejected on 1st strong kick")
 
     plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
     
