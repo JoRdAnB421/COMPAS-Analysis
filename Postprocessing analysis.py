@@ -133,12 +133,14 @@ frac_retained_bound = np.zeros_like(v_esc)
 frac_retained_bound_BHNS = np.zeros_like(v_esc)
 frac_retained_total = np.zeros_like(v_esc)
 frac_hard_bound = np.zeros_like(v_esc)
+frac_hard_bound_retained_1st = np.zeros_like(v_esc)
+
 
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
 
 # Setting the mass of the perturber
-m3 = [10, 20, 40, 80] # M_sol
+m3 = 20 # M_sol
 
 for i in range(len(v_esc)):
     """
@@ -187,6 +189,23 @@ for i in range(len(v_esc)):
     except:
         frac_hard_bound[i] = 0
 
+            # Some required quantities
+    
+    M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
+    
+    # Setting some useful parameters
+    q3 = m3/M12
+    M123 = M12 + m3 # M_sol
+
+    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3/M123)
+    index = np.sqrt(vbsq)<v_esc[i]
+    kept_after_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
+
+    try:
+        frac_hard_bound_retained_1st[i] = 2*len(kept_after_first)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))
+    except:
+        frac_hard_bound_retained_1st[i] = 0
+
 fig, axes = plt.subplots(2, 1, figsize = (10, 8), sharex=True)
 plt.tight_layout(pad=4, h_pad=-0.2)
 
@@ -226,7 +245,7 @@ plt.figure(figsize=(10,8))
 plt.loglog(v_esc[1:], (frac_retained_bound[1:]/frac_retained_total[1:]), label = "Binary fraction")
 plt.loglog(v_esc[1:], (frac_retained_unbound[1:]/frac_retained_total[1:]), label = "Singular fraction")
 plt.loglog(v_esc[1:], frac_hard_bound[1:], "--", label = "Hard binary fraction")
-
+plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:], "-.", label = "binaries retained after first interaction")
 
 plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
 plt.ylabel("Fraction of retained blackholes")
@@ -303,6 +322,8 @@ hardened_frac = np.zeros_like(v_esc)
 binwidth = 1
 linestyles = ["-", "--", ":", "-."]
 
+# Setting a selection of different perturber masses
+m3 = [20, 40, 80] # M_sol
 
 for i in range(1, len(v_esc_tester)):
     '''
@@ -331,7 +352,7 @@ for i in range(1, len(v_esc_tester)):
     plt.figure()
     plt.xscale("log")
     
-    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
+    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
@@ -349,14 +370,11 @@ for i in range(1, len(v_esc_tester)):
     plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
     
     plt.title("ah/a distribution for binaries retained when $v_{{esc}} = {0}$".format(v_esc_tester[i]))
-    plt.ylabel("PDF")
-    plt.xlabel("a [$AU$]")
+    plt.ylabel("N")
     plt.xlabel("$a_{h}/a$")
     plt.legend(loc="upper left")
 
     plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
-
-    print(max(ah_a))
 """
     plt.figure()
     plt.xscale("log")
