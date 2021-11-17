@@ -138,7 +138,7 @@ frac_hard_bound = np.zeros_like(v_esc)
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
 
 # Setting the mass of the perturber
-m3 = 20 # M_sol
+m3 = [10, 20, 40, 80] # M_sol
 
 for i in range(len(v_esc)):
     """
@@ -328,21 +328,23 @@ for i in range(1, len(v_esc_tester)):
     # Here we check how many of these hard binaries would be ejected after a single recoil kick
     M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
     
-    # Some required quantities
-    q3 = m3/M12
-    M123 = M12 + m3 # M_sol
-
-    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3/M123)
-    index = np.sqrt(vbsq)>v_esc_tester[i]
-    eject_on_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
-
     plt.figure()
     plt.xscale("log")
+    
     vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "blue", histtype = "step")
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
-    plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, color = "purple",linestyle="-.", histtype = "step", label = "Systems ejected on 1st strong kick")
+    for j in range(len(m3)):
+        # Some required quantities
+        q3 = m3[j]/M12
+        M123 = M12 + m3[j] # M_sol
+
+        vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3[j]/M123)
+        index = np.sqrt(vbsq)>v_esc_tester[i]
+        eject_on_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
+
+        plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False,linestyle="-.", histtype = "step", label = "m3 = {}".format(m3[j]))
 
     plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
     
@@ -353,6 +355,8 @@ for i in range(1, len(v_esc_tester)):
     plt.legend(loc="upper left")
 
     plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
+
+    print(max(ah_a))
 """
     plt.figure()
     plt.xscale("log")
