@@ -140,7 +140,7 @@ frac_hard_bound_retained_1st = np.zeros_like(v_esc)
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
 
 # Setting the mass of the perturber
-m3 = 20 # M_sol
+m3 = 5 # M_sol
 
 for i in range(len(v_esc)):
     """
@@ -326,7 +326,7 @@ binwidth = 1
 linestyles = ["-", "--", ":", "-."]
 
 # Setting a selection of different perturber masses
-m3 = [20, 40, 80] # M_sol
+m3 = [5, 10, 20] # M_sol
 
 for i in range(1, len(v_esc_tester)):
     '''
