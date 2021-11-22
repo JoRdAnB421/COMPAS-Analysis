@@ -248,7 +248,7 @@ plt.figure(figsize=(10,8))
 plt.loglog(v_esc[1:], (frac_retained_bound[1:]/frac_retained_total[1:]), label = "Binary fraction")
 plt.loglog(v_esc[1:], (frac_retained_unbound[1:]/frac_retained_total[1:]), label = "Singular fraction")
 plt.loglog(v_esc[1:], frac_hard_bound[1:], "--", label = "Hard binary fraction")
-plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:], "-.", label = "binaries retained after first interaction")
+plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:], "-.", label = "Binaries retained after first interaction")
 
 plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
 plt.ylabel("Fraction of retained blackholes")
