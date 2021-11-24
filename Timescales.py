@@ -25,7 +25,7 @@ def GW_timescale(a, e, m1, m2):
     mtot = m1+m2 # M_sol
     mu = (m1*m2)/mtot # M_sol
 
-    tGW = 5/64*((c**5)*a**4)/(G**3*mu*mtot**2)*((1-e**2)**(7/2))/(1+(73*e**2)/24 + (37*e**4)/96) # Seconds
+    tGW = (5/64)*((c**5)*(a**4))/((G**3)*mu*(mtot**2))*((1-e**2)**(7/2))/(1+(73*e**2)/24 + (37*e**4)/96) # Seconds
     return tGW/(3600*24*365.25)
 
 def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
@@ -41,13 +41,13 @@ def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
     G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
     c = 3e5 #kms^-1
     
-    # Convert n into solar radii
-    n = n*(4.435e7)**-3
+    # Convert n into R_sol^-1 km^-2
+    n *= 2.255e-8 *1.05e-27 
 
     mtot = m1+m2 # M_sol
 
-    tRK = (v_esc**3)/(x*n*np.pi*G**2*mp**2)*(1+2*x*mtot/mp)**-1
-    return 
+    tRK = (v_esc**3)/(x*n*np.pi*G**2*mp**2*(1+2*x*(mtot/mp))) # Seconds
+    return tRK/(3600*24*365.25)
 
 COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
 SN = pd.read_csv(cwd + COMPAS_Results_path + "/BSE_Supernovae.csv", skiprows=2)
@@ -79,6 +79,31 @@ BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(~SN["    S
 BH1_unbound.reset_index(drop=True, inplace=True)
 
 v_esc = np.array([50]) # Cluster escape velocity kms^-1
+i = 0
+# Ejected on first SN?
+retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
 
-T_GW = GW_timescale(BHB["SemiMajorAxis "], BHB[" Eccentricity "], BHB["   Mass(CP)   "], BHB["   Mass(SN)   "])
-T_RK = recoil_kick_timescale(5, BHB["   Mass(CP)   "], BHB["   Mass(SN)   "], v_esc[0], 4.77)
+# Number of bound BHBH systems that are retained 
+retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
+
+sigma = v_esc[i]/4.77
+mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
+ah = G*mu/sigma**2 # R_sol
+ah_a = ah/retained_bound["SemiMajorAxis "]
+
+hard = retained_bound.loc[ah_a>1]
+
+T_GW = GW_timescale(hard["SemiMajorAxis "], hard[" Eccentricity "], hard["   Mass(CP)   "], hard["   Mass(SN)   "])
+T_RK = recoil_kick_timescale(5, hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[0], 4.77)
+
+# T_GW = TRK line
+
+T_GW_array = np.logspace(np.log10(min(T_GW)), np.log10(max(T_GW)), 500)
+T_RK_array = T_GW_array
+
+plt.loglog(T_GW_array, T_RK_array, '--')
+plt.loglog(T_GW, T_RK, 'x')
+plt.xlabel("Merger timescale")
+plt.ylabel("Recoil kick timescale")
+
+plt.show()
