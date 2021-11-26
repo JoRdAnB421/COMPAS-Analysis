@@ -25,7 +25,7 @@ def GW_timescale(a, e, m1, m2):
     mtot = m1+m2 # M_sol
     mu = (m1*m2)/mtot # M_sol
 
-    tGW = (5/64)*((c**5)*(a**4))/((G**3)*mu*(mtot**2))*((1-e**2)**(7/2))/(1+(73*e**2)/24 + (37*e**4)/96) # Seconds
+    tGW = (5/64)*((c**5)*((a**4)*695700))/((G**3)*mu*(mtot**2))*((1-e**2)**(7/2))/(1+(73*e**2)/24 + (37*e**4)/96) # Seconds
     return tGW/(3600*24*365.25)
 
 def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
@@ -41,8 +41,8 @@ def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
     G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
     c = 3e5 #kms^-1
     
-    # Convert n into R_sol^-1 km^-2
-    n *= 2.255e-8 *1.05e-27 
+    # Convert n from pc^-3 into R_sol^-2 km^-1
+    n *= 5.083e-16 * 3.241e-14 
 
     mtot = m1+m2 # M_sol
 
@@ -101,9 +101,28 @@ T_RK = recoil_kick_timescale(5, hard["   Mass(CP)   "], hard["   Mass(SN)   "], 
 T_GW_array = np.logspace(np.log10(min(T_GW)), np.log10(max(T_GW)), 500)
 T_RK_array = T_GW_array
 
-plt.loglog(T_GW_array, T_RK_array, '--')
-plt.loglog(T_GW, T_RK, 'x')
-plt.xlabel("Merger timescale")
-plt.ylabel("Recoil kick timescale")
+# Plotting the results
+plt.figure(figsize=(6,5))
+plt.loglog(T_GW, T_RK, 'k.', alpha = 0.8, zorder = 1)
+plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
+plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
 
+plt.ylim(0.95*min(T_RK), 1.05*max(T_RK))
+plt.xlabel("Merger timescale (years)")
+plt.ylabel("Recoil kick timescale (years)")
+plt.legend(loc="best")
+
+plt.figure(figsize=(6,5))
+plt.hist(hard[" Eccentricity "], bins = "auto", histtype="step")
+plt.xlabel("Eccentricity")
+
+plt.figure(figsize=(6,5))
+plt.hist(hard["SemiMajorAxis "], bins = "auto", histtype="step")
+plt.xlabel("Semimajor axis")
+
+plt.figure(figsize=(6,5))
+plt.hist(hard["   Mass(CP)   "], bins="auto", histtype="step", label="CP")
+plt.hist(hard["   Mass(SN)   "], bins="auto", histtype="step", label="SN")
+plt.legend(loc="best")
+plt.xlabel("Mass")
 plt.show()
