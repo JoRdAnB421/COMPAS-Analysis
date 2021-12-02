@@ -61,7 +61,8 @@ if len(invalidVals)>0:
 SN = SN.astype({"SystemicSpeed ":"float64", 
                 "ComponentSpeed(SN)":"float64", 
                 "ComponentSpeed(CP)":"float64",
-                "SemiMajorAxis ":"float64"})
+                "SemiMajorAxis ":"float64",
+                " Eccentricity ":"float64"})
 
 # systems undergoing a second SN
 SN_dup_1 = SN.loc[SN.duplicated(subset="    SEED    ", keep = "last")]
@@ -78,41 +79,46 @@ BHB_unbound.reset_index(drop=True, inplace=True)
 BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(~SN["    SEED    "].isin(SN_dup_1["    SEED    "]))]
 BH1_unbound.reset_index(drop=True, inplace=True)
 
-v_esc = np.array([50]) # Cluster escape velocity kms^-1
-i = 0
-# Ejected on first SN?
-retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
+v_esc = np.array([25, 50, 75, 100]) # Cluster escape velocity kms^-1
 
-# Number of bound BHBH systems that are retained 
-retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
+for i in range(len(v_esc)):
+    # Ejected on first SN?
+    retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
 
-sigma = v_esc[i]/4.77
-mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
-ah = G*mu/sigma**2 # R_sol
-ah_a = ah/retained_bound["SemiMajorAxis "]
+    # Number of bound BHBH systems that are retained 
+    retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
 
-hard = retained_bound.loc[ah_a>1]
+    print(len(retained_bound))
 
-T_GW = GW_timescale(hard["SemiMajorAxis "], hard[" Eccentricity "], hard["   Mass(CP)   "], hard["   Mass(SN)   "])
-T_RK = recoil_kick_timescale(5, hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[0], 4.77)
+    sigma = v_esc[i]/4.77
+    mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
+    ah = G*mu/sigma**2 # R_sol
+    ah_a = ah/retained_bound["SemiMajorAxis "]
 
-# T_GW = TRK line
+    hard = retained_bound.loc[ah_a>1]
 
-T_GW_array = np.logspace(np.log10(min(T_GW)), np.log10(max(T_GW)), 500)
-T_RK_array = T_GW_array
+    T_GW = GW_timescale(hard["SemiMajorAxis "], hard[" Eccentricity "], hard["   Mass(CP)   "], hard["   Mass(SN)   "])
+    T_RK = recoil_kick_timescale(5, hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
 
-# Plotting the results
-plt.figure(figsize=(6,5))
-plt.loglog(T_GW, T_RK, 'k.', alpha = 0.8, zorder = 1)
-plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
-plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
+    # T_GW = TRK line
 
-plt.ylim(0.95*min(T_RK), 1.05*max(T_RK))
-plt.xlabel("Merger timescale (years)")
-plt.ylabel("Recoil kick timescale (years)")
-plt.legend(loc="best")
+    #T_RK_array = np.logspace(np.log10(0.95*min(T_RK)), np.log10(1.05*max(T_RK)), 500)
+    T_RK_array = np.linspace(0.95*min(T_RK), 1.05*max(T_RK), 500)
+    T_GW_array = T_RK_array
 
-plt.figure(figsize=(6,5))
+    # Plotting the results
+    plt.figure(figsize=(6,5))
+    plt.loglog(T_GW, T_RK, 'k.', alpha = 0.8, zorder = 1)
+    plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
+    plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
+
+    plt.title("GW timescale and recoil timescale for $v_{{esc}}={}$ and a perturber mass of $5 \ M_{{\odot}}$".format(v_esc[i]))
+    plt.ylim(0.95*min(T_RK), 1.05*max(T_RK))
+    plt.xlabel("Merger timescale (years)")
+    plt.ylabel("Recoil kick timescale (years)")
+    plt.legend(loc="best")
+
+'''plt.figure(figsize=(6,5))
 plt.hist(hard[" Eccentricity "], bins = "auto", histtype="step")
 plt.xlabel("Eccentricity")
 
@@ -124,5 +130,6 @@ plt.figure(figsize=(6,5))
 plt.hist(hard["   Mass(CP)   "], bins="auto", histtype="step", label="CP")
 plt.hist(hard["   Mass(SN)   "], bins="auto", histtype="step", label="SN")
 plt.legend(loc="best")
-plt.xlabel("Mass")
+plt.xlabel("Mass")'''
+
 plt.show()
