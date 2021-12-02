@@ -4,6 +4,7 @@ This script is for testing the curve fitting of the perturber mass
 
 import numpy as np; import pandas as pd; import matplotlib.pyplot as plt
 import os; from random import choices
+pd.options.mode.chained_assignment = None  
 
 def gauss(x, h, mu, sigma):
     return h*np.exp(-((x-mu)**2)/(2*sigma**2))
@@ -58,12 +59,12 @@ retained_unbound_second_mass2 = BHB_unbound["   Mass(CP)   "].loc[(BHB_unbound["
 lone_mass = np.append(retained_unbound_first_mass.values, retained_unbound_second_mass1.values)
 lone_mass = np.append(lone_mass, retained_unbound_second_mass2)
 
-values, bins,_ = plt.hist(lone_mass, bins = range(0, round(max(lone_mass)), 1), histtype = "step", density = True)
+values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
 bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
 
 m_perturb = choices(bin_mid, weights=values, k=len(retained_bound))
 
-print(len(m_perturb), len(retained_bound))
+plt.hist(m_perturb, bins = range(0, round(max(lone_mass)), 1), histtype = "step")
 
 
 plt.show()
