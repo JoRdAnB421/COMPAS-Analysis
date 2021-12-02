@@ -100,9 +100,6 @@ for i in range(len(v_esc)):
     bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
     
     retained_bound["PerturbingMass"] = choices(bin_mid, weights=values, k=len(retained_bound))
-    retained_bound["PerturbingMass2"] = choices(bin_mid, weights=values, k=len(retained_bound))
-    retained_bound["PerturbingMass3"] = choices(bin_mid, weights=values, k=len(retained_bound))
-
 
     sigma = v_esc[i]/4.77
     mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
@@ -113,8 +110,6 @@ for i in range(len(v_esc)):
 
     T_GW = GW_timescale(hard["SemiMajorAxis "], hard[" Eccentricity "], hard["   Mass(CP)   "], hard["   Mass(SN)   "])
     T_RK = recoil_kick_timescale(hard["PerturbingMass"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
-    T_RK2 = recoil_kick_timescale(hard["PerturbingMass2"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
-    T_RK3 = recoil_kick_timescale(hard["PerturbingMass3"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
 
     # T_GW = TRK line
 
@@ -125,8 +120,6 @@ for i in range(len(v_esc)):
     # Plotting the results
     plt.figure(figsize=(6,5))
     plt.loglog(T_GW, T_RK, 'k.', alpha = 0.8, zorder = 1)
-    plt.loglog(T_GW, T_RK2, 'b.', alpha = 0.8, zorder = 1)
-    plt.loglog(T_GW, T_RK3, 'g.', alpha = 0.8, zorder = 1)
 
     plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
     plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
