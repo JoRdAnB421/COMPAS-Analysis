@@ -2,8 +2,10 @@ import glob
 import sys
 import os
 import pandas as pd
-import numpy as np
+import numpy as np; from random import choices
 import matplotlib.pyplot as plt
+
+pd.options.mode.chained_assignment = None  
 
 def sq_recoil_kick(mass1, mass2, mass3, a):
     q = mass3/(mass1+mass2)
@@ -125,7 +127,7 @@ BHNS_unbound = SN.loc[(SN["Stellar_Type(SN)"]>12)&(SN["Stellar_Type(CP)"]>12)&(S
 BHNS_unbound.reset_index(drop=True, inplace=True)
 
 # Defining a set of possible escape velocities
-v_esc = np.linspace(0, 2500, 1000) # km/s
+v_esc = np.linspace(0.1, 2500, 1000) # km/s
 
 # Setting empty arrays for the fractions
 frac_retained_unbound = np.zeros_like(v_esc)
@@ -139,8 +141,6 @@ frac_hard_bound_retained_1st = np.zeros_like(v_esc)
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
 
-# Setting the mass of the perturber
-m3 = 5 # M_sol
 
 for i in range(len(v_esc)):
     """
@@ -193,14 +193,24 @@ for i in range(len(v_esc)):
     
     M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
     
+    # Setting up a prob distribution for the perturber mass
+    lone_mass = np.append(retained_unbound_0["   Mass(SN)   "].values, retained_unbound_1["   Mass(SN)   "].values)
+    lone_mass = np.append(lone_mass, retained_unbound_2["   Mass(CP)   "].values)
+    
+    values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
+    bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
+    
+    m_perturb = choices(bin_mid, weights=values, k=len(retained_bound))
+    retained_bound["PerturbingMass"] = m_perturb
+
     # Setting some useful parameters
     #q3 = m3/M12
     # Fabio's suggestion is to actually set q3 = 1
     q3 = 1
 
-    M123 = M12 + m3 # M_sol
+    M123 = M12 + m_perturb # M_sol
 
-    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m3/M123)
+    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m_perturb/M123)
     index = np.sqrt(vbsq)<v_esc[i]
     kept_after_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
 
