@@ -9,6 +9,8 @@ import pandas as pd; import numpy as np; import scipy as sp
 from random import choices; import matplotlib.pyplot as plt
 import os 
 
+pd.options.mode.chained_assignment = None  
+
 G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
 cwd = os.getcwd()
 
