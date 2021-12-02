@@ -118,18 +118,4 @@ for i in range(len(v_esc)):
     plt.ylabel("Recoil kick timescale (years)")
     plt.legend(loc="best")
 
-'''plt.figure(figsize=(6,5))
-plt.hist(hard[" Eccentricity "], bins = "auto", histtype="step")
-plt.xlabel("Eccentricity")
-
-plt.figure(figsize=(6,5))
-plt.hist(hard["SemiMajorAxis "], bins = "auto", histtype="step")
-plt.xlabel("Semimajor axis")
-
-plt.figure(figsize=(6,5))
-plt.hist(hard["   Mass(CP)   "], bins="auto", histtype="step", label="CP")
-plt.hist(hard["   Mass(SN)   "], bins="auto", histtype="step", label="SN")
-plt.legend(loc="best")
-plt.xlabel("Mass")'''
-
 plt.show()
