@@ -127,7 +127,7 @@ BHNS_unbound = SN.loc[(SN["Stellar_Type(SN)"]>12)&(SN["Stellar_Type(CP)"]>12)&(S
 BHNS_unbound.reset_index(drop=True, inplace=True)
 
 # Defining a set of possible escape velocities
-v_esc = np.linspace(0.1, 2500, 1000) # km/s
+v_esc = np.linspace(0, 2500, 1000) # km/s
 
 # Setting empty arrays for the fractions
 frac_retained_unbound = np.zeros_like(v_esc)
@@ -197,9 +197,14 @@ for i in range(len(v_esc)):
     lone_mass = np.append(retained_unbound_0["   Mass(SN)   "].values, retained_unbound_1["   Mass(SN)   "].values)
     lone_mass = np.append(lone_mass, retained_unbound_2["   Mass(CP)   "].values)
     
-    values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
-    bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
+    try:
+        values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
+        bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
     
+    except:
+        frac_hard_bound_retained_1st[i] = frac_retained_bound[i]
+        continue
+
     m_perturb = choices(bin_mid, weights=values, k=len(retained_bound))
     retained_bound["PerturbingMass"] = m_perturb
 
