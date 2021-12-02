@@ -5,8 +5,8 @@ timescale to eject a binary from a cluster, to ionise the binary and
 the merger timescale
 '''
 
-import pandas as pd; import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd; import numpy as np; import scipy as sp
+from random import choices; import matplotlib.pyplot as plt
 import os 
 
 G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
@@ -79,7 +79,7 @@ BHB_unbound.reset_index(drop=True, inplace=True)
 BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(~SN["    SEED    "].isin(SN_dup_1["    SEED    "]))]
 BH1_unbound.reset_index(drop=True, inplace=True)
 
-v_esc = np.array([25, 50, 75, 100]) # Cluster escape velocity kms^-1
+v_esc = np.array([25, 50, 75, 100, 125]) # Cluster escape velocity kms^-1
 
 for i in range(len(v_esc)):
     # Ejected on first SN?
@@ -88,7 +88,21 @@ for i in range(len(v_esc)):
     # Number of bound BHBH systems that are retained 
     retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
 
-    print(len(retained_bound))
+    # Now look at the number of retained lone BHs
+    retained_unbound_first_mass = BH1_unbound["   Mass(SN)   "].loc[BH1_unbound["ComponentSpeed(SN)"]<v_esc[i]]
+    retained_unbound_second_mass1 = BHB_unbound["   Mass(SN)   "].loc[(BHB_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+    retained_unbound_second_mass2 = BHB_unbound["   Mass(CP)   "].loc[(BHB_unbound["ComponentSpeed(CP)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+
+    lone_mass = np.append(retained_unbound_first_mass.values, retained_unbound_second_mass1.values)
+    lone_mass = np.append(lone_mass, retained_unbound_second_mass2)
+
+    values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
+    bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
+    
+    retained_bound["PerturbingMass"] = choices(bin_mid, weights=values, k=len(retained_bound))
+    retained_bound["PerturbingMass2"] = choices(bin_mid, weights=values, k=len(retained_bound))
+    retained_bound["PerturbingMass3"] = choices(bin_mid, weights=values, k=len(retained_bound))
+
 
     sigma = v_esc[i]/4.77
     mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
@@ -98,7 +112,9 @@ for i in range(len(v_esc)):
     hard = retained_bound.loc[ah_a>1]
 
     T_GW = GW_timescale(hard["SemiMajorAxis "], hard[" Eccentricity "], hard["   Mass(CP)   "], hard["   Mass(SN)   "])
-    T_RK = recoil_kick_timescale(5, hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
+    T_RK = recoil_kick_timescale(hard["PerturbingMass"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
+    T_RK2 = recoil_kick_timescale(hard["PerturbingMass2"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
+    T_RK3 = recoil_kick_timescale(hard["PerturbingMass3"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
 
     # T_GW = TRK line
 
@@ -109,10 +125,13 @@ for i in range(len(v_esc)):
     # Plotting the results
     plt.figure(figsize=(6,5))
     plt.loglog(T_GW, T_RK, 'k.', alpha = 0.8, zorder = 1)
+    plt.loglog(T_GW, T_RK2, 'b.', alpha = 0.8, zorder = 1)
+    plt.loglog(T_GW, T_RK3, 'g.', alpha = 0.8, zorder = 1)
+
     plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
     plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
 
-    plt.title("GW timescale and recoil timescale for $v_{{esc}}={}$ and a perturber mass of $5 \ M_{{\odot}}$".format(v_esc[i]))
+    plt.title("GW timescale and recoil timescale for $v_{{esc}}={0}$ and a perturber mass pulled from mass distribution".format(v_esc[i]))
     plt.ylim(0.95*min(T_RK), 1.05*max(T_RK))
     plt.xlabel("Merger timescale (years)")
     plt.ylabel("Recoil kick timescale (years)")
