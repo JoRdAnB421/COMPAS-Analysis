@@ -66,6 +66,8 @@ SN = SN.astype({"SystemicSpeed ":"float64",
                 "SemiMajorAxis ":"float64",
                 " Eccentricity ":"float64"})
 
+#Addding comment
+
 # systems undergoing a second SN
 SN_dup_1 = SN.loc[SN.duplicated(subset="    SEED    ", keep = "last")]
 
