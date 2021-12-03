@@ -51,7 +51,7 @@ def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
     tRK = (v_esc**3)/(x*n*np.pi*G**2*mp**2*(1+2*x*(mtot/mp))) # Seconds
     return tRK/(3600*24*365.25)
 
-COMPAS_Results_path = "/COMPAS_Output_solar_metallicity"
+COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
 SN = pd.read_csv(cwd + COMPAS_Results_path + "/BSE_Supernovae.csv", skiprows=2)
 SP = pd.read_csv(cwd + COMPAS_Results_path + "/BSE_System_Parameters.csv", skiprows=2)
 
