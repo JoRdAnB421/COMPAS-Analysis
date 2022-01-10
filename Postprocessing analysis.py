@@ -42,7 +42,7 @@ nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(l
 
 # Setting the path to the COMPAS results 
 #COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
-COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
+COMPAS_Results_path = "/COMPAS_Output_10%solar_metallicity"
 SN = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_System_Parameters.csv"), skiprows=2)
 
@@ -259,11 +259,20 @@ axes[1].set_xlim(1,)
 plt.savefig(cwd+COMPAS_Results_path + "/Fraction of black holes retained.png")
 
 ##################################################
+# This is the fraction of retained stars with the points data from the first petar run
+petar_data_path = r'C:\Users\c1718684\OneDrive - Cardiff University\Desktop\Petar_analysis\10000bodies'
+petar_data = np.loadtxt(petar_data_path+r"\particle_fractions.txt", skiprows = 11)
+
 plt.figure(figsize=(10,8))
 plt.loglog(v_esc[1:], (frac_retained_bound[1:]/frac_retained_total[1:]), label = "Binary fraction")
 plt.loglog(v_esc[1:], (frac_retained_unbound[1:]/frac_retained_total[1:]), label = "Singular fraction")
 plt.loglog(v_esc[1:], frac_hard_bound[1:], "--", label = "Hard binary fraction")
 plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:], "-.", label = "Binaries retained after first interaction")
+
+# Plotting petar data
+plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
+plt.scatter(petar_data[1,0], petar_data[1,1], color="tab:blue")
+plt.scatter(petar_data[2,0], petar_data[2,1], color="tab:green")
 
 plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
 plt.ylabel("Fraction of retained blackholes")
