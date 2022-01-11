@@ -28,6 +28,8 @@ SN_dup_1 = SN.loc[SN.duplicated(subset="    SEED    ", keep = "last")]
 
 first_kick = SN_dup_1["Applied_Kick_Magnitude(SN)"].loc[SN["    SEED    "].isin(BHB["    SEED    "])]
 
+print("did this work")
+
 """
 BHB_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(SN["Stellar_Type(CP)"]==14)]
 BHB_unbound.reset_index(drop=True, inplace=True)
