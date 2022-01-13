@@ -12,7 +12,15 @@ import os
 pd.options.mode.chained_assignment = None  
 
 G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
+
+# Setting path to data and for plots
 cwd = os.getcwd()
+COMPAS_Results_path = "COMPAS_Output_1%solar_metallicity"
+outPlots = "Timescale plots"
+
+# Making directory for plots to exist in.
+outdir = os.path.join(cwd, COMPAS_Results_path, outPlots)
+if not os.path.exists(outdir): os.mkdir(outdir)
 
 def GW_timescale(a, e, m1, m2):
     '''
@@ -51,9 +59,8 @@ def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
     tRK = (v_esc**3)/(x*n*np.pi*G**2*mp**2*(1+2*x*(mtot/mp))) # Seconds
     return tRK/(3600*24*365.25)
 
-COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
-SN = pd.read_csv(cwd + COMPAS_Results_path + "/BSE_Supernovae.csv", skiprows=2)
-SP = pd.read_csv(cwd + COMPAS_Results_path + "/BSE_System_Parameters.csv", skiprows=2)
+SN = pd.read_csv(os.path.join(cwd, COMPAS_Results_path, "BSE_Supernovae.csv"), skiprows=2)
+SP = pd.read_csv(os.path.join(cwd, COMPAS_Results_path,"BSE_System_Parameters.csv"), skiprows=2)
 
 invalidVals = SN.loc[(SN["SystemicSpeed "] == "          -nan")|(SN["SystemicSpeed "] == "          -nan")|(SN["SystemicSpeed "] == "          -nan")]
 if len(invalidVals)>0:
@@ -132,5 +139,8 @@ for i in range(len(v_esc)):
     plt.xlabel("Merger timescale (years)")
     plt.ylabel("Recoil kick timescale (years)")
     plt.legend(loc="best")
+
+    savename = "GWvsRK for v_esc = {}.png".format(v_esc[i])
+    plt.savefig(os.path.join(outdir, savename))
 
 plt.show()
