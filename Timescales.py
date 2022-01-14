@@ -134,7 +134,7 @@ for i in range(len(v_esc)):
     plt.vlines(14e9, 0.95*min(T_RK), 1.05*max(T_RK), colors='red', linestyles='-.', label = "Hubble time", zorder=3)
     plt.loglog(T_GW_array, T_RK_array, '--', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
 
-    plt.title("GW timescale and recoil timescale for $v_{{esc}}={0}$ and a perturber mass pulled from mass distribution".format(v_esc[i]))
+    plt.title("GW timescale and recoil timescale for $v_{{esc}}={0}$ and a perturber mass\npulled from mass distribution".format(v_esc[i]))
     plt.ylim(0.95*min(T_RK), 1.05*max(T_RK))
     plt.xlabel("Merger timescale (years)")
     plt.ylabel("Recoil kick timescale (years)")
