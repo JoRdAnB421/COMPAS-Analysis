@@ -42,7 +42,7 @@ nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(l
 
 # Setting the path to the COMPAS results 
 #COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
-COMPAS_Results_path = "/COMPAS_Output_10%solar_metallicity"
+COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
 SN = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_System_Parameters.csv"), skiprows=2)
 
@@ -204,13 +204,13 @@ for i in range(len(v_esc)):
     hard = retained_bound.loc[ah_a>1]
     
     try:
-        frac_hard_bound[i] = 2*len(hard)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))
+        frac_hard_bound[i] = 2*len(hard)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))
     except:
         frac_hard_bound[i] = 0
 
             # Some required quantities
     
-    M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
+    M12 = hard["   Mass(SN)   "] + hard["   Mass(CP)   "] # Total mass of binary M_sol
     
     # Setting up a prob distribution for the perturber mass
     lone_mass = np.append(retained_unbound_0["   Mass(SN)   "].values, retained_unbound_1["   Mass(SN)   "].values)
@@ -224,8 +224,8 @@ for i in range(len(v_esc)):
         frac_hard_bound_retained_1st[i] = frac_retained_bound[i]
         continue
 
-    m_perturb = choices(bin_mid, weights=values, k=len(retained_bound))
-    retained_bound["PerturbingMass"] = m_perturb
+    m_perturb = choices(bin_mid, weights=values, k=len(hard))
+    hard["PerturbingMass"] = m_perturb
 
     # Setting some useful parameters
     #q3 = m3/M12
@@ -234,12 +234,12 @@ for i in range(len(v_esc)):
 
     M123 = M12 + m_perturb # M_sol
 
-    vbsq = 0.2*(G*mu)/(retained_bound["SemiMajorAxis "])*(m_perturb/M123)
+    vbsq = 0.2*(G*mu)/(hard["SemiMajorAxis "])*(m_perturb/M123)
     index = np.sqrt(vbsq)<v_esc[i]
-    kept_after_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
+    kept_after_first = ah.loc[index]/hard["SemiMajorAxis "].loc[index]
 
     try:
-        frac_hard_bound_retained_1st[i] = 2*len(kept_after_first)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))
+        frac_hard_bound_retained_1st[i] = len(kept_after_first)/(len(hard))
     except:
         frac_hard_bound_retained_1st[i] = 0
 
@@ -290,10 +290,10 @@ plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:]*frac_hard_bound[1:], "-."
 plt.loglog(v_esc[1:], (frac_retained_bound_BH_else[1:]/frac_retained_total[1:]), label="BHs with other stars")
 
 # Plotting petar data
-plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
+'''plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
 plt.scatter(petar_data[1,0], petar_data[1,1], color="tab:blue")
 plt.scatter(petar_data[2,0], petar_data[2,1], color="tab:green")
-
+'''
 plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
 plt.ylabel("Fraction of retained blackholes")
 plt.xlabel("$v_{esc} \ km s^{-1}$")
