@@ -94,7 +94,20 @@ for i in SN_types:
     frac = SN["SN_Type(SN)"].loc[(SN["SN_Type(SN)"]==SN_types[i])&(SN["Unbound"]==0)].count()/len(SN)
     print("{0:.2%} of the SN that do not cause binary disruption are {1}\n".format(frac, i))
 
+# BH - other star (not NS)
+index = np.where(((SP['Stellar_Type(1)']==14)&(SP['Stellar_Type(2)']<13))|((SP['Stellar_Type(1)']<13)&(SP['Stellar_Type(2)']==14))&(SP['Unbound']==0))
+BH_else = SP.loc[index]
 
+# Removing potential stellar mergers which are left over
+BH_else = BH_else.loc[BH_else['Merger']==0]
+
+# Converting to the SN file and finding the systems that experience two supernovae
+BH_else_SN = SN.loc[SN["    SEED    "].isin(BH_else["    SEED    "])]
+
+BH_else_SN_dup = BH_else_SN.loc[BH_else_SN.duplicated(subset='    SEED    ', keep=False)]
+BH_else_SN.drop(BH_else_SN_dup.index, inplace=True)
+BH_else_SN.reset_index(drop=True, inplace=True)
+BH_else_SN_dup = BH_else_SN_dup.loc[BH_else_SN_dup.duplicated(subset='    SEED    ', keep='first')]
 
 # BHBH systems that remain bound
 BHB = SN.loc[(SN["Unbound"]==0)&(SN["Stellar_Type(SN)"]==14)&(SN["Stellar_Type(CP)"]==14)]
@@ -136,10 +149,10 @@ frac_retained_bound_BHNS = np.zeros_like(v_esc)
 frac_retained_total = np.zeros_like(v_esc)
 frac_hard_bound = np.zeros_like(v_esc)
 frac_hard_bound_retained_1st = np.zeros_like(v_esc)
-
+frac_retained_bound_BH_else = np.zeros_like(v_esc)
 
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
-total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound)
+total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound) + len(BH_else)
 
 
 for i in range(len(v_esc)):
@@ -151,6 +164,10 @@ for i in range(len(v_esc)):
     # Ejected on first SN?
     retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
 
+    # Number of BHs bound in systems with non-black holes
+    retained_bound_BH_else_1SN = BH_else_SN.loc[(BH_else_SN["SystemicSpeed "]<v_esc[i])]
+    retained_bound_BH_else_2SN = BH_else_SN_dup[(BH_else_SN_dup["SystemicSpeed "]<v_esc[i])&(BH_else_SN_dup["    SEED    "].isin(retained_from_first["    SEED    "]))]
+    
     # Number of bound BHBH systems that are retained 
     retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
 
@@ -158,7 +175,9 @@ for i in range(len(v_esc)):
     retained_bound_BHNS = BHNS_bound.loc[(BHNS_bound["SystemicSpeed "]<v_esc[i])&(BHNS_bound["    SEED    "].isin(retained_from_first["    SEED    "]))]
     frac_retained_bound_BHNS[i] = (len(retained_bound_BHNS))/total_BH
 
-    frac_retained_bound[i] = (len(retained_bound)*2 + len(retained_bound_BHNS))/total_BH # Fractional bound systems retained (BHNS & BHBH)
+    frac_retained_bound[i] = (len(retained_bound)*2 + len(retained_bound_BHNS) + len(retained_bound_BH_else_1SN) + len(retained_bound_BH_else_2SN))/total_BH # Fractional bound systems retained (BHNS & BHBH)
+
+    frac_retained_bound_BH_else[i] = (len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))/total_BH
 
     # Number/fraction of BHs from unbound BHNS systems that are retained
     retained_unbound_BHNS_SN = BHNS_unbound.loc[(BHNS_unbound["Stellar_Type(SN)"]==14)&(BHNS_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHNS_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
@@ -171,7 +190,7 @@ for i in range(len(v_esc)):
     frac_retained_unbound[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))/total_BH
 
     # Total retained BH fraction
-    frac_retained_total[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))/total_BH
+    frac_retained_total[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))/total_BH
 
     # Here we find the fraction of BHBs which are considered "hard"
     sigma = v_esc[i]/4.77 # King cluster model (sigma = 1D velocity dispersion)
@@ -267,7 +286,8 @@ plt.figure(figsize=(10,8))
 plt.loglog(v_esc[1:], (frac_retained_bound[1:]/frac_retained_total[1:]), label = "Binary fraction")
 plt.loglog(v_esc[1:], (frac_retained_unbound[1:]/frac_retained_total[1:]), label = "Singular fraction")
 plt.loglog(v_esc[1:], frac_hard_bound[1:], "--", label = "Hard binary fraction")
-plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:], "-.", label = "Binaries retained after first interaction")
+plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:]*frac_hard_bound[1:], "-.", label = "Hard binaries retained after first interaction")
+plt.loglog(v_esc[1:], (frac_retained_bound_BH_else[1:]/frac_retained_total[1:]), label="BHs with other stars")
 
 # Plotting petar data
 plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
