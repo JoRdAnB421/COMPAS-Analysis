@@ -1,36 +1,32 @@
-import numpy as np
+import numpy as np; from random import choices
 import matplotlib.pyplot as plt; 
 
-def density_profile(r, a, M0):
+def Kroupa(N):
     '''
-    Creates a normalised density profile for the 
-    Plummer model.
+    Calculates N stellar masses drawing from a Kroupa IMF 0.08 < m < 130
     
-    Inputs >>> r = radius [R_sol]
-               a = Plummer radius [R_sol]
-               M0 = total cluster mass [M_sol]
+    Input >>> N = number of stars wanted
     
-    Output >>> rho = Density probability probability [M_sol/R_sol^3]
+    Output >>> masses = N-sized array of stellar masses
     '''
 
-    G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
-    A = 2*np.pi*a**2/M0 # Normalisation constant
-    return A*(3*M0)/(4*np.pi*a**3)*(1+r**2/a**2)**(-5/2)
+    # Create a list of potential masses and then calculate their weights by using Kroupa IMF
+    potential_mass = np.logspace(np.log10(0.08), np.log10(130), 10**4, endpoint=True)
 
+    weights_low = 0.204*potential_mass[np.where(potential_mass<0.5)]**(-1.3) # Probabilities below m=0.5Msol
+    weights_high = 0.204*potential_mass[np.where(potential_mass>=0.5)]**(-2.3) # Probabilities above m=0.5M_sol
 
-M0 = 10**5 # Sols
+    weights_total = np.append(weights_low, weights_high)
 
-r = np.logspace(0, 4, 1000) 
-a = 10**2
+    # Picking the final masses based on the weights 
+    masses = choices(potential_mass, weights_total,k=N)
+    
+    return masses
 
-rho = density_profile(r, a, M0)
-theta = np.linspace(0, np.pi, 1000)
-phi = np.linspace(0, 2*np.pi, 1000)
+masses = Kroupa(1000)
 
+fig, ax = plt.subplots()
 
-rho = density_profile(r, a, M0)
+ax.hist(masses, bins=50, density =True, histtype='step')
 
-plt.semilogx(r, rho)
-plt.vlines(a, 0,  max(rho), linestyles='--')
 plt.show()
-
