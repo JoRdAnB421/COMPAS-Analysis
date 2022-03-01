@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np; from random import choices
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.size': 14})
 pd.options.mode.chained_assignment = None  
 
 def sq_recoil_kick(mass1, mass2, mass3, a):
@@ -42,7 +43,7 @@ nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(l
 
 # Setting the path to the COMPAS results 
 #COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
-COMPAS_Results_path = "/COMPAS_Output_1%solar_metallicity"
+COMPAS_Results_path = "/COMPAS_Output_10%solar_metallicity"
 SN = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_System_Parameters.csv"), skiprows=2)
 
@@ -140,8 +141,8 @@ BHNS_unbound = SN.loc[(SN["Stellar_Type(SN)"]>12)&(SN["Stellar_Type(CP)"]>12)&(S
 BHNS_unbound.reset_index(drop=True, inplace=True)
 
 # Defining a set of possible escape velocities
-v_esc = np.linspace(0, 2500, 1000) # km/s
-
+#v_esc = np.linspace(0, 2500, 1000) # km/s
+v_esc = np.logspace(0, np.log10(2500), 1000)
 # Setting empty arrays for the fractions
 frac_retained_unbound = np.zeros_like(v_esc)
 frac_retained_bound = np.zeros_like(v_esc)
@@ -150,7 +151,7 @@ frac_retained_total = np.zeros_like(v_esc)
 frac_hard_bound = np.zeros_like(v_esc)
 frac_hard_bound_retained_1st = np.zeros_like(v_esc)
 frac_retained_bound_BH_else = np.zeros_like(v_esc)
-
+BHB_frac = np.zeros_like(v_esc)
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
 total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound) + len(BH_else)
 
@@ -175,9 +176,10 @@ for i in range(len(v_esc)):
     retained_bound_BHNS = BHNS_bound.loc[(BHNS_bound["SystemicSpeed "]<v_esc[i])&(BHNS_bound["    SEED    "].isin(retained_from_first["    SEED    "]))]
     frac_retained_bound_BHNS[i] = (len(retained_bound_BHNS))/total_BH
 
+    BHB_frac[i] = 2*len(retained_bound)/(total_BH)
     frac_retained_bound[i] = (len(retained_bound)*2 + len(retained_bound_BHNS) + len(retained_bound_BH_else_1SN) + len(retained_bound_BH_else_2SN))/total_BH # Fractional bound systems retained (BHNS & BHBH)
 
-    frac_retained_bound_BH_else[i] = (len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))/total_BH
+    frac_retained_bound_BH_else[i] = (len(retained_bound_BH_else_2SN) + len(retained_bound_BHNS) + len(retained_bound_BH_else_1SN))/total_BH
 
     # Number/fraction of BHs from unbound BHNS systems that are retained
     retained_unbound_BHNS_SN = BHNS_unbound.loc[(BHNS_unbound["Stellar_Type(SN)"]==14)&(BHNS_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHNS_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
@@ -215,16 +217,26 @@ for i in range(len(v_esc)):
     # Setting up a prob distribution for the perturber mass
     lone_mass = np.append(retained_unbound_0["   Mass(SN)   "].values, retained_unbound_1["   Mass(SN)   "].values)
     lone_mass = np.append(lone_mass, retained_unbound_2["   Mass(CP)   "].values)
+    lone_mass = np.append(lone_mass, retained_unbound_BHNS_CP["   Mass(CP)   "].values)
+    lone_mass = np.append(lone_mass, retained_unbound_BHNS_SN["   Mass(SN)   "].values)
     
-    try:
-        values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
-        bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
+    if len(lone_mass)>1:
+        try:
+            values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
+            bin_mid = np.array([(bins[j+1]+bins[j])/2 for j in range(len(bins)-1)])
+        except:
+            frac_hard_bound_retained_1st[i] = frac_retained_bound[i]
+            continue
+
+        m_perturb = choices(bin_mid, weights=values, k=len(hard))
     
-    except:
-        frac_hard_bound_retained_1st[i] = frac_retained_bound[i]
+    elif len(lone_mass==1):
+        m_perturb = np.ones(len(hard))*lone_mass[0]
+    
+    else:
+        frac_hard_bound_retained_1st[i] = 1
         continue
 
-    m_perturb = choices(bin_mid, weights=values, k=len(hard))
     hard["PerturbingMass"] = m_perturb
 
     # Setting some useful parameters
@@ -243,17 +255,17 @@ for i in range(len(v_esc)):
     except:
         frac_hard_bound_retained_1st[i] = 0
 
-fig, axes = plt.subplots(2, 1, figsize = (10, 8), sharex=True)
-plt.tight_layout(pad=4, h_pad=-0.2)
-
-# Plotting the fractions against the escape velocity on a loglog scale 
-axes[0].loglog(v_esc, frac_retained_bound, label = "Retained binaries")
-axes[0].loglog(v_esc, frac_retained_unbound, label = "Retained lone BH's")
+fig, axes = plt.subplots(2, 1, figsize=(8,6.5), sharex=True)
+#plt.tight_layout(pad=4, h_pad=-0.2)
+# Plotting the fractions against the escape velocity on a loglog scale
+axes[0].loglog(v_esc, frac_retained_bound_BH_else, color='tab:green', label = 'BH-else') 
+axes[0].loglog(v_esc, BHB_frac, color='tab:purple', label = "Retained BHBs")
+axes[0].loglog(v_esc, frac_retained_unbound, color='tab:orange', label = "Retained lone BH's")
 
 # BHNS is now contained within bound systems
 #plt.loglog(v_esc, frac_retained_bound_BHNS, label = "Bound NSBH") 
 
-axes[0].loglog(v_esc, frac_retained_total, label = "All retained BHs")
+axes[0].loglog(v_esc, frac_retained_total, color='tab:blue', label = "All retained BHs")
 
 # Fraction of those binaries that are hard
 
@@ -262,51 +274,52 @@ axes[1].bar(glob_bin_edges[:-1], height = glob_bin_height, width = glob_bin_widt
 axes[1].bar(glob_bin_edges[:-1], height = glob_bin_height, width = glob_bin_width, fill = None, align = "edge", edgecolor = "gray")
 axes[1].bar(nuc_bin_edges[:-1], height = nuc_bin_height, width = nuc_bin_width, fill = None, align = "edge")
 fig.text(0.27, 0.4, "Globular\nclusters", color = "orange", size="large", weight = "roman")
-fig.text(0.6, 0.4, "Nuclear\nclusters", size="large", weight = "roman")
+fig.text(0.65, 0.4, "Nuclear\nclusters", size="large", weight = "roman")
 
 
-fig.text(0.5, 0.04, "$v_{esc} \ [kms^{-1}]$", ha="center", va="center")
-axes[0].set_title("[Top] Fraction of BHs (in bound binaries, alone and total) retained within different sized stellar clusters.\n[Bottom] Distribution of escape velocities from globular and nuclear clusters\n(recreation from Antonini, F. and Rasio, F.A., 2016.)")
-axes[0].set_ylabel("Fraction of black holes retained")
+#fig.text(0.5, 0.04, "$v_{esc} \ [kms^{-1}]$", ha="center", va="center")
+#axes[0].set_title("[Top] Fraction of BHs (in bound binaries, alone and total) retained within different sized stellar clusters.\n[Bottom] Distribution of escape velocities from globular and nuclear clusters\n(recreation from Antonini, F. and Rasio, F.A., 2016.)")
+axes[0].set_ylabel("Fraction of black holes\nretained", fontsize=15)
 axes[0].legend(loc="best")
 axes[0].set_xlim(1,)
 
-axes[1].set_ylabel("Distribution")
+axes[1].set_ylabel("PDF", fontsize=15)
 axes[1].set_xlim(1,)
+axes[1].set_xlabel("$v_{esc} \ [kms^{-1}]$", fontsize=15)
 #plt.grid(which ="both", ls="--")
-
-plt.savefig(cwd+COMPAS_Results_path + "/Fraction of black holes retained.png")
+plt.tight_layout()
+plt.savefig(cwd+COMPAS_Results_path + "/Fraction of black holes retained.pdf", dpi=400)
 
 ##################################################
 # This is the fraction of retained stars with the points data from the first petar run
 petar_data_path = r'C:\Users\c1718684\OneDrive - Cardiff University\Desktop\Petar_analysis\10000bodies'
 petar_data = np.loadtxt(petar_data_path+r"\particle_fractions.txt", skiprows = 11)
 
-plt.figure(figsize=(10,8))
-plt.loglog(v_esc[1:], (frac_retained_bound[1:]/frac_retained_total[1:]), label = "Binary fraction")
-plt.loglog(v_esc[1:], (frac_retained_unbound[1:]/frac_retained_total[1:]), label = "Singular fraction")
-plt.loglog(v_esc[1:], frac_hard_bound[1:], "--", label = "Hard binary fraction")
-plt.loglog(v_esc[1:], frac_hard_bound_retained_1st[1:]*frac_hard_bound[1:], "-.", label = "Hard binaries retained after first interaction")
-plt.loglog(v_esc[1:], (frac_retained_bound_BH_else[1:]/frac_retained_total[1:]), label="BHs with other stars")
+plt.figure(figsize=(8,6.5))
+plt.loglog(v_esc, BHB_frac/frac_retained_total, color = 'tab:purple', label = "BHB fraction")
+plt.loglog(v_esc, frac_hard_bound, "--", color = 'tab:purple', label = "Hard binary fraction")
+plt.loglog(v_esc, frac_hard_bound_retained_1st*frac_hard_bound, ":", color = 'tab:purple', label = "Hard binaries retained after first interaction")
+plt.loglog(v_esc, (frac_retained_bound/frac_retained_total), color = 'tab:blue', label = "Binary fraction")
+plt.loglog(v_esc, (frac_retained_unbound/frac_retained_total), color = 'tab:orange', label = "Singular fraction")
+plt.loglog(v_esc, (frac_retained_bound_BH_else/frac_retained_total), color = 'tab:green', label="BHs with other stars")
 
 # Plotting petar data
 '''plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
 plt.scatter(petar_data[1,0], petar_data[1,1], color="tab:blue")
 plt.scatter(petar_data[2,0], petar_data[2,1], color="tab:green")
 '''
-plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
-plt.ylabel("Fraction of retained blackholes")
-plt.xlabel("$v_{esc} \ km s^{-1}$")
+#plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
+plt.ylabel("Fraction of retained blackholes", fontsize=15)
+plt.xlabel("$v_{esc} \ km s^{-1}$", fontsize=15)
 plt.legend(loc="best")
-plt.savefig(cwd+COMPAS_Results_path + "/Fraction of retained blackholes that are in binaries.png")
+plt.savefig(cwd+COMPAS_Results_path + "/Fraction of retained blackholes that are in binaries.pdf", dpi=400)
 
 ################################
 '''
 Here I am investigating the kick velocities so that it can be somewhat compared to the escape velocities of the cluster 
 '''
 
-plt.figure(figsize = (10,8))
-
+plt.figure(figsize = (8,6.5))
 # This here would only be taking the systemic kicks for those binaries that remian bound and the component kicks from those which break the binary
 systemic_kicks = np.append(BH1_bound["SystemicSpeed "].values, BHB["SystemicSpeed "].values)
 component_kicks = np.append(BH1_unbound["ComponentSpeed(SN)"].values, [BHB_unbound["ComponentSpeed(SN)"].values, BHB_unbound["ComponentSpeed(CP)"].values])
@@ -325,8 +338,8 @@ plt.xscale("log")
 plt.legend(loc="best")
 plt.xlabel("$V_{kick} \ [kms^{-1}]$")
 plt.ylabel("CDF")
-
-plt.savefig(cwd+COMPAS_Results_path + "/Systemic and Component kick velocities.png")
+plt.tight_layout()
+plt.savefig(cwd+COMPAS_Results_path + "/Systemic and Component kick velocities.pdf", dpi=400)
 '''
 I want to highlight the points at 50% and 90% for each group
 '''
@@ -362,7 +375,7 @@ Here we are testing the hardening of the black holes using the method of compari
 where ah = Gmu/sigma^2 
 '''
 
-v_esc_tester = [0, 20, 50, 100, 125]
+v_esc_tester = [10, 50, 100]
 
 hardened_frac = np.zeros_like(v_esc)
 
@@ -372,13 +385,14 @@ linestyles = ["-", "--", ":", "-."]
 # Setting a selection of different perturber masses
 m3 = [5, 10, 20] # M_sol
 
-for i in range(1, len(v_esc_tester)):
+fig, ax = plt.subplots(len(v_esc_tester), 1, figsize = (8,6.5), sharex=True)
+for i in range(len(v_esc_tester)):
     '''
     This loop will find the binaries that are retained by the cluster and don't become unbound by the end of the simulation and will take the final semi-major axis of these
     binaries. 
     It will then calculate the hardening boundary via (Antonini. F & Gieles. M 2020) ah = G*mu/sigma^2, where mu = (M1*M2)/(M1+M2), sigma = velocity '''
     # Ejected on first SN?
-    retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
+    retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc_tester[i]]
 
     sigma = v_esc_tester[i]/4.77 # King cluster model (sigma = 1D velocity dispersion)
     
@@ -396,10 +410,10 @@ for i in range(1, len(v_esc_tester)):
     # Here we check how many of these hard binaries would be ejected after a single recoil kick
     M12 = retained_bound["   Mass(SN)   "] + retained_bound["   Mass(CP)   "] # Total mass of binary M_sol
     
-    plt.figure()
-    plt.xscale("log")
+    #plt.figure()
+    #plt.xscale("log")
     
-    vals, bin, _ = plt.hist(ah_a, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False, histtype = "step")
+    vals, bin, _ = ax[i].hist(ah_a, bins = np.logspace(min(np.log10(ah_a)), max(np.log10(ah_a)), 50), density = True, cumulative = True, histtype = "step", label='$v_{{esc}}$ = {} kms$^{{-1}}$'.format(v_esc_tester[i]))
     binwidths = [bin[j+1]-bin[j] for j in range(len(bin)-1)]
     bincentres = [(bin[j+1]+bin[j])/2 for j in range(len(bin)-1)]
 
@@ -415,16 +429,18 @@ for i in range(1, len(v_esc_tester)):
         index = np.sqrt(vbsq)>v_esc_tester[i]
         eject_on_first = ah.loc[index]/retained_bound["SemiMajorAxis "].loc[index]
 
-        plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False,linestyle="-.", histtype = "step", label = "m3 = {}".format(m3[j]))
+        #plt.hist(eject_on_first, bins = np.logspace(np.log10(min(ah_a)), np.log10(max(ah_a)), 50), density = False, cumulative = False,linestyle="-.", histtype = "step", label = "m3 = {}".format(m3[j]))
 
-    plt.vlines(1,0, max(vals), linestyles="--", colors="black", label = "ah/a = 1")
-    
-    plt.title("ah/a distribution for binaries retained when $v_{{esc}} = {0}$".format(v_esc_tester[i]))
-    plt.ylabel("N")
-    plt.xlabel("$a_{h}/a$")
-    plt.legend(loc="upper left")
+    ax[i].vlines(1,0, max(vals), linestyles="--", colors="black")
+    ax[i].set_xscale('log')
+    #ax[i].set_yscale('log')
+    ax[i].set_ylim(0.01, 1)
+    #.title("ah/a distribution for binaries retained when $v_{{esc}} = {0}$".format(v_esc_tester[i]))
+    ax[i].set_ylabel("CDF")
+    #plt.xlabel("$a_{h}/a$")
+    ax[i].legend(loc="upper left")
 
-    plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
+    #plt.savefig(outdir_distributions+"/ah_a dist for v_esc = {}.png".format(v_esc_tester[i]))
 """
     plt.figure()
     plt.xscale("log")
@@ -457,6 +473,10 @@ plt.xlabel("ah/a")
 plt.ylabel("Fraction of systems")
 plt.legend(loc="upper left")
 '''
+
+ax[-1].set_xlabel('$a_{h}/a$')
+plt.tight_layout()
+fig.savefig(os.path.join(outdir_distributions, 'aha distribution.pdf'), dpi=400)
 plt.show()
 
 
