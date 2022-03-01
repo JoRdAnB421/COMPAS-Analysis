@@ -35,4 +35,7 @@ plt.plot(sysParams[' Mass@ZAMS(1) '], q, 'x')
 plt.plot(largeBinary[' Mass@ZAMS(1) '], qBig, '.')
 plt.plot(mass, qFunction, '-g')
 plt.plot(mass, probMass, '--k')
+
+print('Fraction of systems with small secondary mass: {0:.1%}'.format(1-len(largeBinary)/len(sysParams)))
+
 plt.show()
