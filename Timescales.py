@@ -5,7 +5,6 @@ timescale to eject a binary from a cluster, to ionise the binary and
 the merger timescale
 '''
 
-from pickle import TUPLE3
 import pandas as pd; import numpy as np; import scipy as sp
 from random import choices; import matplotlib.pyplot as plt
 from scipy.integrate import ode
@@ -36,7 +35,7 @@ betaWithoutMass = (64./5.)*(Gsi**3.0)/(c**5.0)
 daysToSeconds = 86400
 GyrsToSec = MyrsToSec * 1000
 YrsToSec = 3600*24*365.25
-
+G_pcMsolyr = 4.49e-15 # Gravitational constant in pc^3/Msol/year
 
 #----tdelay
 
@@ -47,7 +46,7 @@ backend = 'dopri5'
 def tdelay(ai,ei,m1,m2):
     
     l=len(ei)
-    t_merger=[]
+    t_merger=np.array([])
     
     for i in range (l):
         a0 = ai[i]*Rsol
@@ -98,7 +97,7 @@ def tdelay(ai,ei,m1,m2):
         tm = t_max
         #print tm
         
-        t_merger.append(tm)
+        t_merger = np.append(t_merger, tm)
 
     return t_merger
 
@@ -153,6 +152,24 @@ def interaction_timescale(m1, m2, semi, v_esc, rhoh = 1200):
 
     return abs(t3)
 
+def interaction_timescale_v2(m1, m2 , semi, Mcl, rh):
+    '''
+    Calculates the interaction timescale in terms of the 
+    relaxation time for the relaxation time of the cluster
+    
+    Input >>> m1, m2 = Binary primary and secondary mass (Msol)
+              semi = Binary semi-major axis (Rsol)
+              Mcl = Cluster mass (Msol)
+              rh = Cluster half-mass radius (pc)
+              
+    Output >>> t3trh = interaction timescale per relaxation time
+    '''
+    rh *= 4.435e7 # Convert to Rsol
+
+    t3trh = 10*(m1*m2)/Mcl**2 * rh/(2*semi) # Interaction timescale/relaxation time
+
+    return t3trh
+
 SN = pd.read_csv(os.path.join(cwd, COMPAS_Results_path, "BSE_Supernovae.csv"), skiprows=2)
 SP = pd.read_csv(os.path.join(cwd, COMPAS_Results_path,"BSE_System_Parameters.csv"), skiprows=2)
 
@@ -185,11 +202,22 @@ BH1_unbound.reset_index(drop=True, inplace=True)
 
 v_esc = np.array([5, 10, 25, 50, 80]) # Cluster escape velocity kms^-1
 
-rhoh=1200 # M_sol/pc
+rhoh=1200 # M_sol/pc^3, average density at half mass radius
+
+Mcl = 1e5*(v_esc/50)**3*(rhoh/1e5)**(-1/2) # Finding the cluster mass from eq (29) Antonini & Gieles (2018) (Msol)
+rhcube = (3*Mcl)/(8*np.pi*rhoh) # Finding the half mass radius (pc)
+
+# Calculating the relaxation time for all cluster sizes 
+trh = 0.138/8.09*np.sqrt((Mcl*rhcube)/G_pcMsolyr) # (years)
+
+print('\nAll clusters have a density of {:.3g} M_sol/pc^3\n'.format(rhoh))
+for i, j, k in zip(Mcl, rhcube**(1/3), trh):
+    print('With a cluster mass {0:.3g} Msol and a half-mass radius {1:.3g} pc\nthe relaxation time is {2:.3g} years\n'.format(i, j, k))
 
 # Making subplots
 fig, ax = plt.subplots(figsize=(8,6.5))
 
+print('\n--------------------------------\n')
 # Empty list to find max and min for straight lines later
 RKrange = [10**20, 0]
 for i in range(len(v_esc)):
@@ -220,10 +248,16 @@ for i in range(len(v_esc)):
     hard = retained_bound.loc[ah_a>1]
 
     T_GW = tdelay(hard["SemiMajorAxis "].values, hard[" Eccentricity "].values, hard["   Mass(CP)   "].values, hard["   Mass(SN)   "].values)
-    #T_RK = recoil_kick_timescale(hard["PerturbingMass"], hard["   Mass(CP)   "], hard["   Mass(SN)   "], v_esc[i], 4.77)
+    T_GW /= trh[i]
+    
+    #T_RK = interaction_timescale(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "], v_esc[i], rhoh=rhoh)
 
-    T_RK = interaction_timescale(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "], v_esc[i], rhoh=rhoh)
+    T_RK = interaction_timescale_v2(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "].values, Mcl[i], rhcube[i]**(1/3))
+    #T_RK *= trh[i]
 
+    # Caculating the fraction of systems with T_GW < T_RK
+    frac_merge_inside = sum(T_GW<T_RK)/len(T_GW)
+    print('For v_esc = {0:.3g} km/s, {1:.1%} of binaries merge before an interaction.\n'.format(v_esc[i], frac_merge_inside))
     # T_GW = TRK line
     if min(T_RK) < RKrange[0]:
         RKrange[0]=min(T_RK)
@@ -234,13 +268,8 @@ for i in range(len(v_esc)):
     #plt.figure(figsize=(6,5))
     ax.loglog(T_GW, T_RK, '.', alpha = 0.8, zorder = 1, label = "$v_{{esc}}$ = {} kms$^{{-1}}$".format(v_esc[i]))
 
-    #plt.title("GW timescale and recoil timescale for $v_{{esc}}={0}$ and a perturber mass\npulled from mass distribution".format(v_esc[i]))
-    #ax.set_ylim(0.95*min(T_RK), 1.05*max(T_RK))
-    #plt.xlabel("Merger timescale (years)")
-    #plt.ylabel("Recoil kick timescale (years)")
-    
-
     #savename = "GWvsRK for v_esc = {}.png".format(v_esc[i])
+    
 
 
 #T_RK_array = np.logspace(np.log10(0.95*min(T_RK)), np.log10(1.05*max(T_RK)), 500)
