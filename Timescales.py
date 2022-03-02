@@ -6,7 +6,7 @@ the merger timescale
 '''
 
 import pandas as pd; import numpy as np; import scipy as sp
-from random import choices; import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from scipy.integrate import ode
 import os 
 
@@ -172,8 +172,8 @@ BH1_unbound.reset_index(drop=True, inplace=True)
 
 ##################################################
 # Creating a variety of different clusters
-Mcl_range = np.logspace(4, 6, 10, endpoint = True) # Range of cluster masses (Msol)
-rh_range = np.linspace(1, 4, 10) # Range of half-mass radii (pc)
+Mcl_range = np.logspace(4, 6, 20, endpoint = True) # Range of cluster masses (Msol)
+rh_range = np.linspace(1, 4, 20) # Range of half-mass radii (pc)
 
 # Defining a 2D array for all the possible densities, escape velocities and relaxation times
 trh_range = np.zeros((len(Mcl_range), len(rh_range)))
@@ -248,5 +248,5 @@ ax.set_xlabel('Half-mass Radius (pc)')
 ax.set_ylabel('Cluster mass (M$_{\odot}$)')
 fig.tight_layout()
 
-fig.savefig(os.path.join(cwd, COMPAS_Results_path, 'Fraction merging before interaction.png'))
+fig.savefig(os.path.join(outdir, 'Fraction merging before interaction.png'))
 plt.show()
