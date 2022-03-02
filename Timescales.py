@@ -99,7 +99,7 @@ def tdelay(ai,ei,m1,m2):
         
         t_merger = np.append(t_merger, tm)
 
-    return t_merger
+    return t_merger.T
 
 def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
     '''
@@ -121,36 +121,6 @@ def recoil_kick_timescale(mp, m1, m2, v_esc, x, n=1e4):
 
     tRK = (v_esc**3)/(x*n*np.pi*G**2*mp**2*(1+2*x*(mtot/mp))) # Seconds
     return tRK/(3600*24*365.25)
-
-def interaction_timescale(m1, m2, semi, v_esc, rhoh = 1200):
-    '''
-    Calculates the timescale for and interaction from eq (13) and eq (20) of
-    Antonini & Gieles (2020)
-    
-    Input >>> m1, m2 = binary primary and secondary mass (Msol)
-              semi = binary semi-major axis (Rsol)
-              v_esc = cluster escape velocity (km/s)
-              rhoh = cluster density within half-mass radius (Msol/pc^3)
-    
-    Output >>> t3 = timescale for interaction (years)
-              '''
-    G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2
-
-    rhoh *= 1.146e-23 # Convert rhoh to Msol/Rsol^3
-
-    # Find binary component
-    binary_comp = (G*m1*m2)/(semi*0.809)
-
-    # Find cluster component
-    cluster_comp = (3*G)/(8*np.pi*rhoh*v_esc**4)
-
-    # Calculate timescale and return
-    t3 = 0.069*binary_comp*cluster_comp**(0.5) # Units of secs Rsol/km
-
-    # Convert to years
-    t3 *= 6.957e5/(3600*24*365)
-
-    return abs(t3)
 
 def interaction_timescale_v2(m1, m2 , semi, Mcl, rh):
     '''
@@ -200,100 +170,83 @@ BHB_unbound.reset_index(drop=True, inplace=True)
 BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(~SN["    SEED    "].isin(SN_dup_1["    SEED    "]))]
 BH1_unbound.reset_index(drop=True, inplace=True)
 
-v_esc = np.array([5, 10, 25, 50, 80]) # Cluster escape velocity kms^-1
+##################################################
+# Creating a variety of different clusters
+Mcl_range = np.logspace(4, 6, 10, endpoint = True) # Range of cluster masses (Msol)
+rh_range = np.linspace(1, 4, 10) # Range of half-mass radii (pc)
 
-rhoh=1200 # M_sol/pc^3, average density at half mass radius
+# Defining a 2D array for all the possible densities, escape velocities and relaxation times
+trh_range = np.zeros((len(Mcl_range), len(rh_range)))
+rhoh_range = np.zeros((len(Mcl_range), len(rh_range)))
+v_esc_range = np.zeros((len(Mcl_range), len(rh_range)))
 
-Mcl = 1e5*(v_esc/50)**3*(rhoh/1e5)**(-1/2) # Finding the cluster mass from eq (29) Antonini & Gieles (2018) (Msol)
-rhcube = (3*Mcl)/(8*np.pi*rhoh) # Finding the half mass radius (pc)
+print('Relaxation times for a range of masses and radii\n')
+for i in range(len(Mcl_range)):
+    for j in range(len(rh_range)):
+        '''
+        Fills in the 2D array of densities, escape velocities and relaxation times, 
+        for every combination of cluster mass and half-mass radius
+        ''' 
+        rhoh_range[i,j] = (Mcl_range[i]/2)/(4/3*np.pi*rh_range[j]**3) # rho range (Msol/pc^3)
+        v_esc_range[i, j] = 50*(Mcl_range[i]/1e5)**(1/3)*(rhoh_range[i,j]/1e5)**(1/6) # Vesc range (km/s)
 
-# Calculating the relaxation time for all cluster sizes 
-trh = 0.138/8.09*np.sqrt((Mcl*rhcube)/G_pcMsolyr) # (years)
+        trh_range[i, j] = 0.138/8.09*np.sqrt((Mcl_range[i]*rh_range[j])/G_pcMsolyr) # Relaxation time (years)
 
-print('\nAll clusters have a density of {:.3g} M_sol/pc^3\n'.format(rhoh))
-for i, j, k in zip(Mcl, rhcube**(1/3), trh):
-    print('With a cluster mass {0:.3g} Msol and a half-mass radius {1:.3g} pc\nthe relaxation time is {2:.3g} years\n'.format(i, j, k))
+        # Printing result
+        print('For Mcl = {0:.3g} Msol, rh = {1:.3g} pc:  Trh = {2:.3g} years'.format(Mcl_range[i], rh_range[j], trh_range[i,j]))
+    print('----------------------------\n')
 
 # Making subplots
 fig, ax = plt.subplots(figsize=(8,6.5))
 
-print('\n--------------------------------\n')
-# Empty list to find max and min for straight lines later
-RKrange = [10**20, 0]
-for i in range(len(v_esc)):
-    # Ejected on first SN?
-    retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
+# Empty 2D array for the fractions merging before interaction
+frac_merge_inside = np.zeros((len(Mcl_range), len(rh_range)))
 
-    # Number of bound BHBH systems that are retained 
-    retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
+for i in range(len(Mcl_range)):
+    for j in range(len(rh_range)):
+        # Ejected on first SN?
+        retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc_range[i, j]]
 
-    # Now look at the number of retained lone BHs
-    retained_unbound_first_mass = BH1_unbound["   Mass(SN)   "].loc[BH1_unbound["ComponentSpeed(SN)"]<v_esc[i]]
-    retained_unbound_second_mass1 = BHB_unbound["   Mass(SN)   "].loc[(BHB_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
-    retained_unbound_second_mass2 = BHB_unbound["   Mass(CP)   "].loc[(BHB_unbound["ComponentSpeed(CP)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+        # Number of bound BHBH systems that are retained 
+        retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc_range[i, j])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
 
-    lone_mass = np.append(retained_unbound_first_mass.values, retained_unbound_second_mass1.values)
-    lone_mass = np.append(lone_mass, retained_unbound_second_mass2)
+        # Now look at the number of retained lone BHs
+        retained_unbound_first_mass = BH1_unbound["   Mass(SN)   "].loc[BH1_unbound["ComponentSpeed(SN)"]<v_esc_range[i, j]]
+        retained_unbound_second_mass1 = BHB_unbound["   Mass(SN)   "].loc[(BHB_unbound["ComponentSpeed(SN)"]<v_esc_range[i, j])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+        retained_unbound_second_mass2 = BHB_unbound["   Mass(CP)   "].loc[(BHB_unbound["ComponentSpeed(CP)"]<v_esc_range[i, j])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
 
-    values, bins = np.histogram(lone_mass, bins = range(0, round(max(lone_mass)), 1), density = True)
-    bin_mid = np.array([(bins[i+1]+bins[i])/2 for i in range(len(bins)-1)])
-    
-    retained_bound["PerturbingMass"] = choices(bin_mid, weights=values, k=len(retained_bound))
+        sigma = v_esc_range[i, j]/4.77
+        mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
+        ah = G*mu/sigma**2 # R_sol
+        ah_a = ah/retained_bound["SemiMajorAxis "]
 
-    sigma = v_esc[i]/4.77
-    mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
-    ah = G*mu/sigma**2 # R_sol
-    ah_a = ah/retained_bound["SemiMajorAxis "]
+        hard = retained_bound.loc[ah_a>1]
 
-    hard = retained_bound.loc[ah_a>1]
+        T_GW = tdelay(hard["SemiMajorAxis "].values, hard[" Eccentricity "].values, hard["   Mass(CP)   "].values, hard["   Mass(SN)   "].values)
+        T_GW /= trh_range[i, j]
+        
+        T_RK = interaction_timescale_v2(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "].values, Mcl_range[i], rh_range[j]**(1/3))
+        #T_RK *= trh[i]
 
-    T_GW = tdelay(hard["SemiMajorAxis "].values, hard[" Eccentricity "].values, hard["   Mass(CP)   "].values, hard["   Mass(SN)   "].values)
-    T_GW /= trh[i]
-    
-    #T_RK = interaction_timescale(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "], v_esc[i], rhoh=rhoh)
+        HubbleTime = 14e9/trh_range[i, j]
 
-    T_RK = interaction_timescale_v2(hard["   Mass(SN)   "].values, hard["   Mass(CP)   "].values, hard["SemiMajorAxis "].values, Mcl[i], rhcube[i]**(1/3))
-    #T_RK *= trh[i]
+        # Caculating the fraction of systems with T_GW < T_RK
+        frac_merge_inside[i, j] = sum((T_GW<T_RK)&(T_GW<HubbleTime))/sum(T_GW<HubbleTime)
+        
+    print('{0:1.0%} completed'.format((i+1)/len(Mcl_range)))
 
-    # Caculating the fraction of systems with T_GW < T_RK
-    frac_merge_inside = sum(T_GW<T_RK)/len(T_GW)
-    print('For v_esc = {0:.3g} km/s, {1:.1%} of binaries merge before an interaction.\n'.format(v_esc[i], frac_merge_inside))
-    # T_GW = TRK line
-    if min(T_RK) < RKrange[0]:
-        RKrange[0]=min(T_RK)
-    if max(T_RK) > RKrange[1]:
-        RKrange[1]=max(T_RK)
+# Making a contour plot for the fraction of systems that merge before they have an interaction. 
+ax.set_yscale('log')
+im = ax.contourf(rh_range, Mcl_range, frac_merge_inside)
 
-    # Plotting the results
-    #plt.figure(figsize=(6,5))
-    ax.loglog(T_GW, T_RK, '.', alpha = 0.8, zorder = 1, label = "$v_{{esc}}$ = {} kms$^{{-1}}$".format(v_esc[i]))
+# Generating color bar and giving it a label
+cbar = fig.colorbar(im, )
+cbar.set_label('Fraction merge before interaction', rotation=270, labelpad=12)
 
-    #savename = "GWvsRK for v_esc = {}.png".format(v_esc[i])
-    
+# Formatting plot
+ax.set_xlabel('Half-mass Radius (pc)')
+ax.set_ylabel('Cluster mass (M$_{\odot}$)')
+fig.tight_layout()
 
-
-#T_RK_array = np.logspace(np.log10(0.95*min(T_RK)), np.log10(1.05*max(T_RK)), 500)
-
-# Defining and plotting a hubble time and T_RK=T_GW
-T_RK_array = np.linspace(0.95*RKrange[0], 1.05*RKrange[1], 500)
-T_GW_array = T_RK_array
-
-
-ax.vlines(14e9, 0.8*RKrange[0], 1.2*RKrange[1], colors='black', linestyles=':', label = "Hubble time", zorder=3)
-ax.loglog(T_GW_array, T_RK_array, '--', color='black', zorder = 2, label = "$\\tau_{GW} = \\tau_{RK}$")
-
-# Making a single legend for all 
-'''handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper right')
-'''
-# Adding text for labels
-ax.set_xlabel('Merger timescale (years)')
-ax.set_ylabel('Recoil kick timescale (years)')
-handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles[::-1], labels[::-1], loc='upper right')
-#fig.text(0.05, 0.5, 'Recoil kick timescale (years)', va='center', ha='center', rotation=90)
-
-
-fig.savefig(os.path.join(outdir, 'Timescale_plots.pdf'), dpi=100)
-
+fig.savefig(os.path.join(cwd, COMPAS_Results_path, 'Fraction merging before interaction.png'))
 plt.show()
