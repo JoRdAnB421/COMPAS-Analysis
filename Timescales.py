@@ -8,15 +8,49 @@ the merger timescale
 import pandas as pd; import numpy as np; import scipy as sp
 import matplotlib.pyplot as plt
 from scipy.integrate import ode
-import os 
+import os; import glob; import sys
 
 pd.options.mode.chained_assignment = None  
 plt.rcParams.update({'font.size': 12})
 G = 1.908e5 # R_sol*(M_sol)^-1*km^2*s^-2 
 
+def find_dir():
+        '''
+        Finds the likely location for the petar data files to be stored
+        and gives the option to autoselect them.
+
+        Returns data directory as a string
+        '''
+
+        # Finding possible directories where data could be stored
+        directories = glob.glob("COMPAS_Output*")
+
+        # Create a dictionary to store the available directories and index vals
+        directoryList = {str(i): directories[i] for i in range(len(directories))}
+
+        # Print the available directories
+        print("Possible Directories:\n")
+        for key, val in directoryList.items():
+                print(key, ":", val)
+
+        # Asking what directory the data is stored in and giving a list of potential directories
+        chooseDirectory = input("\nWhat directory is the data stored in?  ")
+        if chooseDirectory in directoryList.keys():
+                dataDirectory = directoryList[str(chooseDirectory)]
+
+        elif os.path.exists(str(chooseDirectory)):
+                dataDirectory = str(chooseDirectory)
+
+        else:
+                print("Could not find directory\n")
+                print("Quitting")
+                sys.exit()
+
+        return dataDirectory
+
 # Setting path to data and for plots
 cwd = os.getcwd()
-COMPAS_Results_path = "COMPAS_Output_1%solar_metallicity"
+COMPAS_Results_path = find_dir()
 outPlots = "Timescale plots"
 
 # Making directory for plots to exist in.
@@ -172,8 +206,8 @@ BH1_unbound.reset_index(drop=True, inplace=True)
 
 ##################################################
 # Creating a variety of different clusters
-Mcl_range = np.logspace(4, 6, 20, endpoint = True) # Range of cluster masses (Msol)
-rh_range = np.linspace(1, 4, 20) # Range of half-mass radii (pc)
+Mcl_range = np.logspace(4, 6, 5, endpoint = True) # Range of cluster masses (Msol)
+rh_range = np.linspace(1, 4, 5) # Range of half-mass radii (pc)
 
 # Defining a 2D array for all the possible densities, escape velocities and relaxation times
 trh_range = np.zeros((len(Mcl_range), len(rh_range)))
