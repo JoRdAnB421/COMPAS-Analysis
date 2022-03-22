@@ -357,6 +357,9 @@ COMPAS_Output_1%solar_metallicity_1million/
 COMPAS_Output_SanaDist_1%metal
 COMPAS_Output_SanaDist_10%metal
 COMPAS_Output_SanaDist_solmetal
+COMPAS_Output_SanaDist_1%metal_2
+COMPAS_Output_SanaDist_10%metal_2
+COMPAS_Output_SanaDist_solmetal_2
 
 
 # Ignore Antonini & Rasio 2016 data
