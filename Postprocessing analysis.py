@@ -7,6 +7,39 @@ import matplotlib.pyplot as plt
 
 plt.rcParams.update({'font.size': 14})
 pd.options.mode.chained_assignment = None  
+def find_dir():
+        '''
+        Finds the likely location for the petar data files to be stored
+        and gives the option to autoselect them.
+
+        Returns data directory as a string
+        '''
+
+        # Finding possible directories where data could be stored
+        directories = glob.glob("COMPAS_Output*")
+
+        # Create a dictionary to store the available directories and index vals
+        directoryList = {str(i): directories[i] for i in range(len(directories))}
+
+        # Print the available directories
+        print("Possible Directories:\n")
+        for key, val in directoryList.items():
+                print(key, ":", val)
+
+        # Asking what directory the data is stored in and giving a list of potential directories
+        chooseDirectory = input("\nWhat directory is the data stored in?  ")
+        if chooseDirectory in directoryList.keys():
+                dataDirectory = directoryList[str(chooseDirectory)]
+
+        elif os.path.exists(str(chooseDirectory)):
+                dataDirectory = str(chooseDirectory)
+
+        else:
+                print("Could not find directory\n")
+                print("Quitting")
+                sys.exit()
+
+        return dataDirectory
 
 def sq_recoil_kick(mass1, mass2, mass3, a):
     q = mass3/(mass1+mass2)
@@ -26,6 +59,7 @@ SN_types = {"ccSN":1,
 
 # Finding current working directory
 cwd = os.getcwd()
+dataDir = find_dir()
 
 # Grabbing Fabio's escape velocity data from Antonini, F. and Rasio, F.A., 2016. 
 data_path = "/Antonini_Rasio_data"
@@ -43,9 +77,9 @@ nuc_bin_width = np.array([nuc_bin_edges[i+1] - nuc_bin_edges[i] for i in range(l
 
 # Setting the path to the COMPAS results 
 #COMPAS_Results_path = r"C:\Users\jorda\OneDrive\Desktop\PhD\COMPAS Results\COMPAS_Output_solar_metallicity"
-COMPAS_Results_path = "/COMPAS_Output_10%solar_metallicity"
-SN = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_Supernovae.csv"), skiprows=2)
-SP = pd.read_csv((cwd+COMPAS_Results_path + "/BSE_System_Parameters.csv"), skiprows=2)
+COMPAS_Results_path = dataDir
+SN = pd.read_csv(os.path.join(cwd,COMPAS_Results_path , "BSE_Supernovae.csv"), skiprows=2)
+SP = pd.read_csv(os.path.join(cwd,COMPAS_Results_path , "BSE_System_Parameters.csv"), skiprows=2)
 
 EAB = SP.loc[SP['Equilibrated_At_Birth'] == 1]
 SN.drop(SN.loc[SN["    SEED    "].isin(EAB["    SEED    "])].index, inplace = True)
@@ -61,7 +95,7 @@ SN = SN.astype({"SystemicSpeed ":"float64",
                 "SemiMajorAxis ":"float64"})
 
 # Making a folder for the distribution plots
-outdir_distributions = cwd+COMPAS_Results_path + "/Plots for different escape velocities"
+outdir_distributions = os.path.join(cwd,COMPAS_Results_path , "/Plots for different escape velocities")
 if not os.path.exists(outdir_distributions): os.makedirs(outdir_distributions) 
 
 print(SN.keys())
@@ -122,7 +156,7 @@ All_BHB = SN.loc[(SN["Stellar_Type(SN)"]==14)&(SN["Stellar_Type(CP)"]==14)]
 All_BHB.reset_index(drop=True, inplace=True)
 
 # Black holes that are formed in the first supernovae but don't break the binary
-BH1_bound = SN.loc[(SN.duplicated(subset=["    SEED    "], keep = "last"))&(SN["Stellar_Type(SN)"]==14)]
+BH1_bound = SN.loc[(SN.duplicated(subset=["    SEED    "], keep = "last"))&(SN["Stellar_Type(SN)"]==14)&(SN["Unbound"]==0)]
 BH1_bound.reset_index(drop=True, inplace=True)
 
 # Neutron stars that are formed in the first supernovae but don't break the binary
@@ -130,8 +164,13 @@ NS1_bound = SN.loc[(SN.duplicated(subset=["    SEED    "], keep = "last"))&(SN["
 NS1_bound.reset_index(drop=True, inplace=True)
 
 # Black holes formed in the first supernovae which break the binary
-BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(~SN["    SEED    "].isin(SN_dup_1["    SEED    "]))]
+BH1_unbound = SN.loc[(SN["Unbound"]==1)&(SN["Stellar_Type(SN)"]==14)&(SN["    SEED    "].isin(SN_dup_1["    SEED    "]))]
 BH1_unbound.reset_index(drop=True, inplace=True)
+
+# Black holes formed in the second supernovae of binaries already broken
+Unbound_on_first = SN_dup_1.loc[SN_dup_1["Unbound"]==1]
+BH2_unbound = SN_dup_2.loc[(SN_dup_2["Stellar_Type(SN)"]==14)&(SN_dup_2["    SEED    "].isin(Unbound_on_first["    SEED    "]))]
+BH2_unbound.reset_index(drop=True, inplace=True)
 
 # BHNS systems
 BHNS_bound = SN.loc[(SN["Stellar_Type(SN)"]>12)&(SN["Stellar_Type(CP)"]>12)&(SN["Stellar_Type(SN)"]!=SN["Stellar_Type(CP)"])&(SN["Unbound"]==0)]
@@ -152,8 +191,10 @@ frac_hard_bound = np.zeros_like(v_esc)
 frac_hard_bound_retained_1st = np.zeros_like(v_esc)
 frac_retained_bound_BH_else = np.zeros_like(v_esc)
 BHB_frac = np.zeros_like(v_esc)
+BHB_frac_esc = np.zeros_like(v_esc)
+
 # Total number of BHs inludes those in BHBH binaries, BHNS binaries and unbound BHs from the first or second SN 
-total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound) + len(BH_else)
+total_BH = (len(BHB)+len(BHB_unbound))*2 + len(BHNS_bound) + len(BHNS_unbound) + len(BH1_unbound) + len(BH_else) + len(BH2_unbound)
 
 
 for i in range(len(v_esc)):
@@ -163,7 +204,7 @@ for i in range(len(v_esc)):
     need to look at these systems for the second SN as they have already left the cluster
     """
     # Ejected on first SN?
-    retained_from_first = SN_dup_1.loc[SN_dup_1["SystemicSpeed "]<v_esc[i]]
+    retained_from_first = SN_dup_1.loc[(SN_dup_1["SystemicSpeed "]<v_esc[i])&(SN_dup_1["Unbound"]==0)]
 
     # Number of BHs bound in systems with non-black holes
     retained_bound_BH_else_1SN = BH_else_SN.loc[(BH_else_SN["SystemicSpeed "]<v_esc[i])]
@@ -171,7 +212,9 @@ for i in range(len(v_esc)):
     
     # Number of bound BHBH systems that are retained 
     retained_bound = BHB.loc[(BHB["SystemicSpeed "]<v_esc[i])&(BHB["    SEED    "].isin(retained_from_first["    SEED    "]))]
+    unretained_bound = BHB.loc[(~BHB["    SEED    "].isin(retained_bound["    SEED    "]))]
 
+    BHB_frac_esc[i] = 2*len(unretained_bound)/total_BH
     # Number/fraction of bound BHNS systems that are retained
     retained_bound_BHNS = BHNS_bound.loc[(BHNS_bound["SystemicSpeed "]<v_esc[i])&(BHNS_bound["    SEED    "].isin(retained_from_first["    SEED    "]))]
     frac_retained_bound_BHNS[i] = (len(retained_bound_BHNS))/total_BH
@@ -187,12 +230,15 @@ for i in range(len(v_esc)):
 
     # Number/fraction of unbound BHs that are retained
     retained_unbound_0 = BH1_unbound.loc[BH1_unbound["ComponentSpeed(SN)"]<v_esc[i]]
-    retained_unbound_1 = BHB_unbound.loc[BHB_unbound["ComponentSpeed(SN)"]<v_esc[i]]
-    retained_unbound_2 = BHB_unbound.loc[BHB_unbound["ComponentSpeed(CP)"]<v_esc[i]]
-    frac_retained_unbound[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN))/total_BH
+    retained_unbound_1 = BHB_unbound.loc[(BHB_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+    retained_unbound_2 = BHB_unbound.loc[(BHB_unbound["ComponentSpeed(CP)"]<v_esc[i])&(BHB_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
+
+    retained_unbound_from_first = Unbound_on_first.loc[Unbound_on_first["ComponentSpeed(CP)"]<v_esc[i]]
+    retained_unbound_3 = BH2_unbound.loc[(BH2_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BH2_unbound["    SEED    "].isin(retained_unbound_from_first["    SEED    "]))]
+    frac_retained_unbound[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN) + len(retained_unbound_3))/total_BH
 
     # Total retained BH fraction
-    frac_retained_total[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))/total_BH
+    frac_retained_total[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + len(retained_unbound_3) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))/total_BH
 
     # Here we find the fraction of BHBs which are considered "hard"
     sigma = v_esc[i]/4.77 # King cluster model (sigma = 1D velocity dispersion)
@@ -206,7 +252,7 @@ for i in range(len(v_esc)):
     hard = retained_bound.loc[ah_a>1]
     
     try:
-        frac_hard_bound[i] = 2*len(hard)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))
+        frac_hard_bound[i] = 2*len(hard)/(len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2) +len(retained_unbound_3) + 2*len(retained_bound)+len(retained_bound_BHNS)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN)+len(retained_bound_BH_else_1SN)+len(retained_bound_BH_else_2SN))
     except:
         frac_hard_bound[i] = 0
 
@@ -217,6 +263,7 @@ for i in range(len(v_esc)):
     # Setting up a prob distribution for the perturber mass
     lone_mass = np.append(retained_unbound_0["   Mass(SN)   "].values, retained_unbound_1["   Mass(SN)   "].values)
     lone_mass = np.append(lone_mass, retained_unbound_2["   Mass(CP)   "].values)
+    lone_mass = np.append(lone_mass, retained_unbound_3["   Mass(SN)   "].values)
     lone_mass = np.append(lone_mass, retained_unbound_BHNS_CP["   Mass(CP)   "].values)
     lone_mass = np.append(lone_mass, retained_unbound_BHNS_SN["   Mass(SN)   "].values)
     
@@ -288,7 +335,7 @@ axes[1].set_xlim(1,)
 axes[1].set_xlabel("$v_{esc} \ [kms^{-1}]$", fontsize=15)
 #plt.grid(which ="both", ls="--")
 plt.tight_layout()
-plt.savefig(cwd+COMPAS_Results_path + "/Fraction of black holes retained.pdf", dpi=400)
+plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of black holes retained.pdf"), dpi=400)
 
 ##################################################
 # This is the fraction of retained stars with the points data from the first petar run
@@ -312,7 +359,19 @@ plt.scatter(petar_data[2,0], petar_data[2,1], color="tab:green")
 plt.ylabel("Fraction of retained blackholes", fontsize=15)
 plt.xlabel("$v_{esc} \ km s^{-1}$", fontsize=15)
 plt.legend(loc="best")
-plt.savefig(cwd+COMPAS_Results_path + "/Fraction of retained blackholes that are in binaries.pdf", dpi=400)
+plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of retained blackholes that are in binaries.pdf"), dpi=400)
+
+
+###############################
+# Plotting the escaped fraction 
+
+plt.figure(figsize=(8, 6.5))
+plt.semilogx(v_esc, BHB_frac_esc, color='tab:purple')
+
+plt.xlabel('v$_{esc}$')
+plt.ylabel('Frac Escaped')
+
+plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of escaped BHBs.pdf"), dpi=400)
 
 ################################
 '''
@@ -339,7 +398,7 @@ plt.legend(loc="best")
 plt.xlabel("$V_{kick} \ [kms^{-1}]$")
 plt.ylabel("CDF")
 plt.tight_layout()
-plt.savefig(cwd+COMPAS_Results_path + "/Systemic and Component kick velocities.pdf", dpi=400)
+plt.savefig(os.path.join(cwd,COMPAS_Results_path , "Systemic and Component kick velocities.pdf"), dpi=400)
 '''
 I want to highlight the points at 50% and 90% for each group
 '''
