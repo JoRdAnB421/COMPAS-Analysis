@@ -1,4 +1,5 @@
 import glob; import os; import sys
+from wsgiref.simple_server import WSGIRequestHandler
 import pandas as pd; import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import ode
@@ -60,8 +61,6 @@ def find_dir():
 
 #-- Choose ODE integrator
 backend = 'dopri5'
-
-
 def tdelay(ai,ei,m1,m2):
     
     l=len(ei)
@@ -198,10 +197,12 @@ BHNS_unbound = SN.loc[(SN["Stellar_Type(SN)"]>12)&(SN["Stellar_Type(CP)"]>12)&(S
 BHNS_unbound.reset_index(drop=True, inplace=True)
 
 # Defining a set of possible escape velocities
-v_esc = np.linspace(0, 10, 50)
+v_esc = np.logspace(0, np.log10(100), 50)
 mergerInHubbleTime = np.zeros_like(v_esc)
+mergerInHubbleTime_esc = np.zeros_like(v_esc)
 lone_num = np.zeros_like(v_esc)
 
+fig, ax = plt.subplots()
 for i in range(len(v_esc)):
     """
     For each escape velocity, calculate the fraction of BHs that are retained for each of the possible systems that BHs exist in
@@ -220,6 +221,11 @@ for i in range(len(v_esc)):
     merger_time = tdelay(retained_bound["SemiMajorAxis "].values, retained_bound[" Eccentricity "].values, retained_bound["   Mass(SN)   "].values, retained_bound["   Mass(CP)   "].values)
     mergerInHubbleTime[i] = len(merger_time[merger_time<13.7e9])
 
+    # Unretained bound
+    unretained_bound = BHB.loc[(~BHB["    SEED    "].isin(retained_bound["    SEED    "]))]
+    merger_time_esc = tdelay(unretained_bound["SemiMajorAxis "].values, unretained_bound[" Eccentricity "].values, unretained_bound["   Mass(SN)   "].values, unretained_bound["   Mass(CP)   "].values)
+    mergerInHubbleTime_esc[i] = len(merger_time_esc[merger_time_esc<13.7e9])/len(merger_time_esc)
+
     # Number/fraction of BHs from unbound BHNS systems that are retained
     retained_unbound_BHNS_SN = BHNS_unbound.loc[(BHNS_unbound["Stellar_Type(SN)"]==14)&(BHNS_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BHNS_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
     retained_unbound_BHNS_CP = BHNS_unbound.loc[(BHNS_unbound["Stellar_Type(CP)"]==14)&(BHNS_unbound["ComponentSpeed(CP)"]<v_esc[i])&(BHNS_unbound["    SEED    "].isin(retained_from_first["    SEED    "]))]
@@ -232,12 +238,19 @@ for i in range(len(v_esc)):
     retained_unbound_from_first = Unbound_on_first.loc[Unbound_on_first["ComponentSpeed(CP)"]<v_esc[i]]
     retained_unbound_3 = BH2_unbound.loc[(BH2_unbound["ComponentSpeed(SN)"]<v_esc[i])&(BH2_unbound["    SEED    "].isin(retained_unbound_from_first["    SEED    "]))]
     lone_num[i] = (len(retained_unbound_0) + len(retained_unbound_1)+len(retained_unbound_2)+len(retained_unbound_BHNS_CP)+len(retained_unbound_BHNS_SN) + len(retained_unbound_3))
-
-    print('{:2.1%} Completed'.format((i+1)/50), end='\r',)
-fig, ax = plt.subplots()
+    
+    print('{:2.1%} Completed'.format((i+1)/len(v_esc)), end='\r',)
 
 total_merge = mergerInHubbleTime+lone_num/2
-ax.plot(v_esc, mergerInHubbleTime/total_merge, label='BHB')
-ax.plot(v_esc, (lone_num/2)/total_merge, label ='singles')
+ax.semilogx(v_esc, mergerInHubbleTime/total_merge, color='tab:blue', label = 'Primordial Binaries')
+ax.semilogx(v_esc, (lone_num/2)/total_merge, color='tab:orange', label = 'Dynamical Binaries')
+ax.semilogx(v_esc, mergerInHubbleTime_esc, '--', color='tab:green', label = 'Escaped')
 
+#ax.vlines(23.92, 0, 1, linestyles=':', color ='black')
+
+ax.legend(loc='best')
+ax.set_xlabel('v$_{esc}$ (km s$^{-1}$')
+ax.set_ylabel('Fraction retained that merge in\na Hubble time')
+
+fig.savefig(os.path.join(dataDir, 'Fraction Merge in Hubble time.pdf'), dpi=100)
 plt.show()
