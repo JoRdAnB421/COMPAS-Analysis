@@ -267,7 +267,7 @@ for i in range(len(Mcl_range)):
         # Caculating the fraction of systems with T_GW < T_RK
         frac_merge_inside[i, j] = sum((T_GW<T_RK)&(T_GW<HubbleTime))/sum(T_GW<HubbleTime)
         
-    print('{0:1.0%} completed'.format((i+1)/len(Mcl_range)))
+    print('{0:1.0%} completed'.format((i+1)/len(Mcl_range)), end='\r', )
 
 # Making a contour plot for the fraction of systems that merge before they have an interaction. 
 ax.set_yscale('log')
