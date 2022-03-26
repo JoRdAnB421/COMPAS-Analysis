@@ -5,14 +5,47 @@ Here we plot the primary and secondary BH mass distribution for those binary bla
 '''
 
 from numpy import percentile
-import pandas as pd; import os
+import pandas as pd; import os; import glob; import sys
 import matplotlib.pyplot as plt
 
 #plt.rcParams.update({'font.size': 1})
+def find_dir():
+        '''
+        Finds the likely location for the petar data files to be stored
+        and gives the option to autoselect them.
 
+        Returns data directory as a string
+        '''
+
+        # Finding possible directories where data could be stored
+        directories = glob.glob("COMPAS_Output*")
+
+        # Create a dictionary to store the available directories and index vals
+        directoryList = {str(i): directories[i] for i in range(len(directories))}
+
+        # Print the available directories
+        print("Possible Directories:\n")
+        for key, val in directoryList.items():
+                print(key, ":", val)
+
+        # Asking what directory the data is stored in and giving a list of potential directories
+        chooseDirectory = input("\nWhat directory is the data stored in?  ")
+        if chooseDirectory in directoryList.keys():
+                dataDirectory = directoryList[str(chooseDirectory)]
+
+        elif os.path.exists(str(chooseDirectory)):
+                dataDirectory = str(chooseDirectory)
+
+        else:
+                print("Could not find directory\n")
+                print("Quitting")
+                sys.exit()
+
+        return dataDirectory
 # Setting the path to the COMPAS results in question
 cwd = os.getcwd()
-COMPAS_Results_path = os.path.join(cwd,'COMPAS_Output_10%solar_metallicity')
+dataDir = find_dir()
+COMPAS_Results_path = os.path.join(cwd,dataDir)
 DCO = pd.read_csv(os.path.join(COMPAS_Results_path, 'BSE_Double_Compact_Objects.csv'), delimiter = ",", skiprows = 2)
 
 # Removing systems that were equilibrated at Birth
