@@ -246,6 +246,7 @@ for i in range(len(v_esc)):
     mu = (retained_bound["   Mass(SN)   "]*retained_bound["   Mass(CP)   "])/(retained_bound["   Mass(SN)   "]+retained_bound["   Mass(CP)   "]) # M_sol
 
     # Hard boundary 
+    # Strictly speaking this only true for single mass perturbers
     ah = G*mu/sigma**2 # R_sol
     ah_a = ah/retained_bound["SemiMajorAxis "]
 
@@ -308,6 +309,8 @@ fig, axes = plt.subplots(2, 1, figsize=(8,6.5), sharex=True)
 axes[0].loglog(v_esc, frac_retained_bound_BH_else, color='tab:green', label = 'BH-else') 
 axes[0].loglog(v_esc, BHB_frac, color='tab:purple', label = "Retained BHBs")
 axes[0].loglog(v_esc, frac_retained_unbound, color='tab:orange', label = "Retained lone BH's")
+
+
 
 # BHNS is now contained within bound systems
 #plt.loglog(v_esc, frac_retained_bound_BHNS, label = "Bound NSBH") 
