@@ -206,8 +206,8 @@ BH1_unbound.reset_index(drop=True, inplace=True)
 
 ##################################################
 # Creating a variety of different clusters
-Mcl_range = np.logspace(4, 6, 5, endpoint = True) # Range of cluster masses (Msol)
-rh_range = np.linspace(1, 4, 5) # Range of half-mass radii (pc)
+Mcl_range = np.logspace(4, 6, 10, endpoint = True) # Range of cluster masses (Msol)
+rh_range = np.linspace(1, 4, 10) # Range of half-mass radii (pc)
 
 # Defining a 2D array for all the possible densities, escape velocities and relaxation times
 trh_range = np.zeros((len(Mcl_range), len(rh_range)))
@@ -224,7 +224,7 @@ for i in range(len(Mcl_range)):
         rhoh_range[i,j] = (Mcl_range[i]/2)/(4/3*np.pi*rh_range[j]**3) # rho range (Msol/pc^3)
         v_esc_range[i, j] = 50*(Mcl_range[i]/1e5)**(1/3)*(rhoh_range[i,j]/1e5)**(1/6) # Vesc range (km/s)
 
-        trh_range[i, j] = 0.138/8.09*np.sqrt((Mcl_range[i]*rh_range[j])/G_pcMsolyr) # Relaxation time (years)
+        trh_range[i, j] = 0.138/8.09*np.sqrt((Mcl_range[i]*rh_range[j]**3)/G_pcMsolyr) # Relaxation time (years)
 
         # Printing result
         print('For Mcl = {0:.3g} Msol, rh = {1:.3g} pc:  Trh = {2:.3g} years'.format(Mcl_range[i], rh_range[j], trh_range[i,j]))
@@ -271,7 +271,8 @@ for i in range(len(Mcl_range)):
 
 # Making a contour plot for the fraction of systems that merge before they have an interaction. 
 ax.set_yscale('log')
-im = ax.contourf(rh_range, Mcl_range, frac_merge_inside)
+levels = np.arange(0, 1.05, 0.05)
+im = ax.contourf(rh_range, Mcl_range, frac_merge_inside, levels=levels, cmap='summer')
 
 # Generating color bar and giving it a label
 cbar = fig.colorbar(im, )
