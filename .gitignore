@@ -361,6 +361,8 @@ COMPAS_Output_SanaDist_1%metal_2/
 COMPAS_Output_SanaDist_10%metal_2/
 COMPAS_Output_SanaDist_solmetal_2/
 COMPAS_Output_PeTar_M100000/
+COMPAS_Output*/
+.ipynb_checkpoints/
 
 # Ignore Antonini & Rasio 2016 data
 Antonini_Rasio_data/
