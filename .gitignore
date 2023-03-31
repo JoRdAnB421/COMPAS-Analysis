@@ -367,3 +367,5 @@ COMPAS_Output*/
 # Ignore Antonini & Rasio 2016 data
 Antonini_Rasio_data/
 
+# Ignore comparison plots that are stored here
+*.pdf

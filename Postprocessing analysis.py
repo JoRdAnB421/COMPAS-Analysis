@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np; from random import choices
 import matplotlib.pyplot as plt
 
-plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({'font.size': 16})
 pd.options.mode.chained_assignment = None  
 def find_dir():
         '''
@@ -182,6 +182,14 @@ BHNS_unbound.reset_index(drop=True, inplace=True)
 # Defining a set of possible escape velocities
 #v_esc = np.linspace(0, 2500, 1000) # km/s
 v_esc = np.logspace(0, np.log10(2500), 1000)
+
+# Fixing Mass and varying the rh to see the plot changes
+fcl = 119.3 # For W0=7
+Mcl = 1e6 # Msol
+rh = np.logspace(np.log10(14232), np.log10(2.28e-3), 500) # pc
+
+v_esc = fcl * (Mcl/1e6)**(1/2) * (rh/1)**(-1/2)
+
 # Setting empty arrays for the fractions
 frac_retained_unbound = np.zeros_like(v_esc)
 frac_retained_bound = np.zeros_like(v_esc)
@@ -294,7 +302,7 @@ for i in range(len(v_esc)):
 
     M123 = M12 + m_perturb # M_sol
 
-    vbsq = 0.2*(G*mu)/(hard["SemiMajorAxis "])*(m_perturb/M123)
+    vbsq = 0.2*(G*mu)/(hard["SemiMajorAxis "])*(M12/M123)
     index = np.sqrt(vbsq)<v_esc[i]
     kept_after_first = ah.loc[index]/hard["SemiMajorAxis "].loc[index]
 
@@ -338,7 +346,7 @@ axes[1].set_xlim(1,)
 axes[1].set_xlabel("$v_{esc} \ [kms^{-1}]$", fontsize=15)
 #plt.grid(which ="both", ls="--")
 plt.tight_layout()
-plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of black holes retained.pdf"), dpi=400)
+# plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of black holes retained.pdf"), dpi=400)
 
 ##################################################
 # This is the fraction of retained stars with the points data from the first petar run
@@ -346,12 +354,12 @@ petar_data_path = r'C:\Users\c1718684\OneDrive - Cardiff University\Desktop\Peta
 petar_data = np.loadtxt(petar_data_path+r"\particle_fractions.txt", skiprows = 11)
 
 plt.figure(figsize=(8,6.5))
-plt.loglog(v_esc, BHB_frac/frac_retained_total, color = 'tab:purple', label = "BHB fraction")
-plt.loglog(v_esc, frac_hard_bound, "--", color = 'tab:purple', label = "Hard binary fraction")
-plt.loglog(v_esc, frac_hard_bound_retained_1st*frac_hard_bound, ":", color = 'tab:purple', label = "Hard binaries retained after first interaction")
-plt.loglog(v_esc, (frac_retained_bound/frac_retained_total), color = 'tab:blue', label = "Binary fraction")
-plt.loglog(v_esc, (frac_retained_unbound/frac_retained_total), color = 'tab:orange', label = "Singular fraction")
-plt.loglog(v_esc, (frac_retained_bound_BH_else/frac_retained_total), color = 'tab:green', label="BHs with other stars")
+plt.loglog(v_esc, BHB_frac/frac_retained_total, color = 'tab:purple', label = "$f_{\mathrm{BBH}}$")
+plt.loglog(v_esc, frac_hard_bound, "--", color = 'tab:purple', label = "$f_{\mathrm{BBH, HARD}}$")
+plt.loglog(v_esc, frac_hard_bound_retained_1st*frac_hard_bound, ":", color = 'tab:purple', label = "$f_{\mathrm{BBH, HARD, Dynm}}$")
+plt.loglog(v_esc, (frac_retained_bound/frac_retained_total), color = 'tab:blue', label = "$f_{\mathrm{Bin}}$")
+plt.loglog(v_esc, (frac_retained_unbound/frac_retained_total), color = 'tab:orange', label = "$f_{\mathrm{Sing}}$")
+plt.loglog(v_esc, (frac_retained_bound_BH_else/frac_retained_total), color = 'tab:green', label="$f_{\mathrm{Bin, Else}}$")
 
 # Plotting petar data
 '''plt.scatter(petar_data[0,0], petar_data[0,1], color="tab:orange")
@@ -359,10 +367,10 @@ plt.scatter(petar_data[1,0], petar_data[1,1], color="tab:blue")
 plt.scatter(petar_data[2,0], petar_data[2,1], color="tab:green")
 '''
 #plt.title("Fraction of retained lone BHs and BHs in binaries, normalised to the total number of\nretained BHs")
-plt.ylabel("Fraction of retained blackholes", fontsize=15)
-plt.xlabel("$v_{esc} \ km s^{-1}$", fontsize=15)
-plt.legend(loc="best")
-plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of retained blackholes that are in binaries.pdf"), dpi=400)
+plt.ylabel("$f_{\mathrm{BH}}$", fontsize=18)
+plt.xlabel("$v_{esc} \ km s^{-1}$", fontsize=18)
+plt.legend(loc="best", fontsize=15, frameon=False)
+# plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of retained blackholes that are in binaries.pdf"), dpi=100)
 
 
 ###############################
@@ -374,7 +382,7 @@ plt.semilogx(v_esc, BHB_frac_esc, color='tab:purple')
 plt.xlabel('v$_{esc}$')
 plt.ylabel('Frac Escaped')
 
-plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of escaped BHBs.pdf"), dpi=400)
+# plt.savefig(os.path.join(cwd,COMPAS_Results_path, "Fraction of escaped BHBs.pdf"), dpi=400)
 
 ################################
 '''
@@ -401,7 +409,7 @@ plt.legend(loc="best")
 plt.xlabel("$V_{kick} \ [kms^{-1}]$")
 plt.ylabel("CDF")
 plt.tight_layout()
-plt.savefig(os.path.join(cwd,COMPAS_Results_path , "Systemic and Component kick velocities.pdf"), dpi=400)
+# plt.savefig(os.path.join(cwd,COMPAS_Results_path , "Systemic and Component kick velocities.pdf"), dpi=400)
 '''
 I want to highlight the points at 50% and 90% for each group
 '''
@@ -538,7 +546,7 @@ plt.legend(loc="upper left")
 
 ax[-1].set_xlabel('$a_{h}/a$')
 plt.tight_layout()
-fig.savefig(os.path.join(outdir_distributions, 'aha distribution.pdf'), dpi=400)
+# fig.savefig(os.path.join(outdir_distributions, 'aha distribution.pdf'), dpi=400)
 plt.show()
 
 
