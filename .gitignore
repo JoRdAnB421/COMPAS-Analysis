@@ -368,4 +368,9 @@ COMPAS_Output*/
 Antonini_Rasio_data/
 
 # Ignore comparison plots that are stored here
-*.pdf
+*.pdf 
+Debatri data
+*.in
+*.txt
+*.bin0
+.functions*
